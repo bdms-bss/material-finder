@@ -29,8 +29,10 @@ GitHub Pages ให้บริการ static frontend เท่านั้�
 - Asset mapping ใช้ `sap_MaterialGroup_Asset`; GL/Asset descriptions จาก master โดยตรง
 - Taxonomy ใช้ `Master_DataTaxonomy`; ไม่ apply แผ่น `New_Edit` ซึ่งเป็นรายการขอแก้ไข
 - Material ที่มี deletion flag ถูกซ่อนโดยค่าเริ่มต้น; group INACTIVE ยังอาจพบได้ตามชื่อใน master ให้ตรวจสอบก่อนใช้
-- CAPEX ยืนยันการอยู่ใน `Master_MaterialCAPEX`; Asset mapping อย่างเดียวแสดงเป็น CAPEX candidate
-- ไม่มีหลักฐาน CAPEX ไม่ได้แปลว่า OPEX: ให้บัญชียืนยันนโยบาย งบประมาณ ราคา และการใช้งาน ไม่เดา classification
+- กติกา BDMS BSS: มี Asset class → CAPEX; มี GL-A (Admin expense) หรือ GL-C (Cost) → OPEX; มีทั้งสองประเภท mapping → CAPEX/OPEX
+- ไม่มีทั้งสอง mapping → ไม่พบข้อมูลจัดประเภท; GL-S เพียงอย่างเดียวไม่ใช้สรุป OPEX
+- ใช้กติกานี้ทั้ง Material และ Material group โดยอ้างอิง group mapping; ไม่ใช้การอยู่ในแผ่น MaterialCAPEX มา override กติกา
+- กรณี CAPEX/OPEX ให้เลือกตามวัตถุประสงค์ PR และนโยบายบัญชี
 - วันที่บนหน้าจอเป็นวันที่ snapshot ของไฟล์ แต่วันที่ปรับปรุงแต่ละ sheet แตกต่างกัน
 
 ## อัปเดต master
