@@ -37,3 +37,13 @@
 - progress, completed state, modal interaction ทำงาน และไม่พบ JavaScript errors หรือ network POST requests
 
 ทดสอบ deterministic UI ด้วย `scripts/check-ui.cjs`: category → L0 filter, query, sort, load more, copy code/summary, group-vs-code warning, no results, AI drawer, cancel/fallback, keyboard tabs/Escape, invalid image, data error/retry, mobile 390/320 px และไม่แสดงผล AI เก่าหลังเปลี่ยนคำค้น. axe-core ไม่พบ violations ในสถานะที่ระบุใน [UX_DESIGN.md](UX_DESIGN.md); ไม่ใช่การรับรอง WCAG conformance ครบทุกข้อ.
+
+## BDMS branding / Material Master / category drilldown
+
+- ยืนยัน export ก่อนและหลังปรับ: ตัดเพิ่ม 13,326 Material codes และ 107 Groups เฉพาะ Material group `Z00000000` และ `M*`; รหัส Material เช่น `MSP...` ที่อยู่ในกลุ่มปกติยังอยู่
+- ข้อมูลหลังคัดกรอง: 59,172 Material codes / 11,367 Material groups; Direct Pay = 1 Material code / 183 Groups
+- การ์ดสรุปยอดแยก Material codes/Groups รวมตรงกับ export และไม่เปลี่ยนยอดของหมวดอื่นเมื่อ drilldown
+- เลือก Direct Pay แล้ว sidebar, aria-pressed, focus และรายการด้านล่างตรงกัน; กดซ้ำเพื่อล้างหมวดได้
+- โหลดโลโก้ SVG สำเร็จ และ headline เป็นข้อความกลาง ๆ Material Master
+- คำว่า Catalog ใช้เฉพาะอธิบายขอบเขต/การตรวจ Plant ไม่ใช้เป็นชื่อผลค้นหา
+- ตรวจ axe เพิ่มใน summary-facet state รวมถึง home/detail/AI/mobile results: 0 violations ในชุดตรวจ WCAG ที่ใช้อยู่

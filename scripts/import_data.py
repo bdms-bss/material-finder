@@ -5,10 +5,13 @@ def rows(s,n):
   yield ['' if v is None else str(v).strip() for v in r]
 groups={}
 excluded_groups=set()
+def excluded_group_code(value):
+ code=str(value or "").strip().upper()
+ return code == "Z00000000" or code.startswith("M")
 def excluded_description(value):
  return str(value or "").strip().upper().startswith(("INACTIVE", "(CANCEL)"))
 for r in rows('sap_MaterialGroup',6):
- if r[1] and excluded_description(r[2]):
+ if r[1] and (excluded_description(r[2]) or excluded_group_code(r[1])):
   excluded_groups.add(r[1])
   continue
  if r[1]: groups[r[1]]={'code':r[1],'name':r[2],'levels':[],'gl':{},'assets':[],'keywords':[]}
@@ -22,7 +25,7 @@ for r in rows('sap_MaterialGroup_Asset',6):
 capex={r[5] for r in rows('Master_MaterialCAPEX',6) if r[5]}
 materials=[]
 for r in rows('sap_MaterialCode',6):
- if not r[1] or r[7].strip().upper() == 'X' or r[5] in excluded_groups or excluded_description(r[13]) or r[2].strip().upper().startswith("(CANCEL)"):
+ if not r[1] or r[7].strip().upper() == 'X' or r[5] in excluded_groups or excluded_group_code(r[5]) or excluded_description(r[13]) or r[2].strip().upper().startswith("(CANCEL)"):
   continue
  materials.append([r[1],r[2],r[5],r[3],r[4],False,r[1] in capex])
 data={'groups':list(groups.values()),'materials':materials,'gl':{r[1]:r[3] for r in rows('sap_GL',5) if r[1]},'assets':{r[1]:r[2] for r in rows('sap_AssetClass',5) if r[1]},'source':'H BDMS DCT-PRD-DataTaxonomy(20261030).xlsx','date':'2026-10-30'}

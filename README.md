@@ -1,6 +1,6 @@
-# BDMS Material Finder
+# BDMS Material Master
 
-เว็บค้นหา Material code / Material group สำหรับ PR และวางแผนงบประมาณ พร้อม Taxonomy L0–L4, GL แยก Department type และ Asset class จาก master จริง รองรับภาษาไทยด้วยคำพ้องที่กำหนดไว้และ AI บนเครื่องผู้ใช้
+เว็บอ้างอิง Material code / Material group จาก Material Master สำหรับเตรียมการจัดซื้อและวางแผนงบประมาณ พร้อม Taxonomy L0–L4, GL แยก Department type และ Asset class จาก master จริง รองรับภาษาไทยด้วยคำพ้องที่กำหนดไว้และ AI บนเครื่องผู้ใช้
 
 ## เปิดเว็บ
 
@@ -28,6 +28,8 @@ GitHub Settings → Pages → Deploy from a branch → main → /docs. URL: http
 - ตัด Material ที่ `Deletion at Client Level = X` ออกจากข้อมูลที่เผยแพร่
 - ตัด Material groups ที่ description ขึ้นต้น `INACTIVE` และ Materials ที่ผูกกับกลุ่มเหล่านี้หรือมี Material Group Description ขึ้นต้น `INACTIVE` (trim และไม่แยกตัวพิมพ์เล็กใหญ่)
 - ตัดชื่อ Material Description หรือ Material Group Description ที่ขึ้นต้น `(CANCEL)` และ Material ที่ผูกกับกลุ่มดังกล่าวตั้งแต่ก่อนสร้างไฟล์ข้อมูลเว็บ (trim และไม่แยกตัวพิมพ์เล็กใหญ่)
+- ตัด Material group `Z00000000` และทุก Group ที่ขึ้นต้น `M` รวมถึง Materials ที่ผูกกับ Group เหล่านี้
+- Group `Z*` ที่เหลือจัดเป็น **Direct Pay** ซึ่งเป็นประเภทการจ่าย แยกจาก Taxonomy L0 และไม่เปลี่ยน CAPEX/OPEX mapping
 - ใช้ข้อมูลหลังตัดรายการเดียวกันกับผลค้นหา สถิติ และ AI; ไม่มีตัวเลือกเปิดแสดงรายการที่ตัดออก
 - กติกา BDMS BSS: มี Asset class → CAPEX; มี GL-A (Admin expense) หรือ GL-C (Cost) → OPEX; มีทั้งสองประเภท mapping → CAPEX/OPEX
 - ไม่มีทั้งสอง mapping → ไม่พบข้อมูลจัดประเภท; GL-S เพียงอย่างเดียวไม่ใช้สรุป OPEX
@@ -50,3 +52,11 @@ commit `docs/data.json` ใหม่แล้ว deploy Pages. ไม่ commit 
 ตรวจสอบโค้ดและกติกาข้อมูล: `npm run check` และ `npm test` (ไม่ต้องติดตั้ง dependency).
 
 สำหรับ browser/UI/accessibility regression: ติดตั้ง dev dependencies ด้วย `npm install`, ติดตั้ง browser ด้วย `npx playwright install chromium` แล้วรัน `npm run test:ui`. ใช้ `CHROMIUM_PATH` หากมี Chromium ในเครื่องอยู่แล้ว. ผล screenshot อยู่ใน temporary directory `material-finder-ui` หรือกำหนด `UI_ARTIFACT_DIR` เอง. AI ใน automated UI test ใช้ Worker จำลอง; ผลทดสอบโมเดลจริงดู [TESTING.md](TESTING.md).
+
+## Material Master และผลค้นหาแยกหมวด
+
+ระบบนี้แสดง **Material Master ส่วนกลาง ไม่ใช่ Catalog ระดับ Plant**. การมี code ใน Master ไม่ยืนยันว่ามีรายการใน Catalog ของ Plant หรือพร้อมเปิด PR; Catalog แยกตาม Plant และมีจำนวนรายการมาก จึงไม่แสดงในระบบนี้. มีข้อความกำกับในหน้าแรก รายละเอียด และข้อมูลที่คัดลอก.
+
+หลังค้นหา แสดงการ์ดสรุปตาม Commodity L0, Direct Pay (`Z*` ที่ไม่ถูก exclude) และกลุ่มที่ไม่มี L0. การ์ดนับ **Material codes และ Material groups แยกกัน**. Counts คำนวณจากคำค้นพร้อมตัวกรองประเภทข้อมูล/งบประมาณ ก่อนกรองหมวด เพื่อให้เปลี่ยนหมวดได้โดยยังเห็นยอดของหมวดอื่น. เลือกการ์ดแล้วกรองผล; เลือกการ์ดเดิมอีกครั้งหรือ “ทั้งหมด” เพื่อล้างหมวด.
+
+ใช้โลโก้ BDMS เวกเตอร์แบบเดียวกับ reference โดยคงสีและสัดส่วนเดิม พร้อมธีมน้ำเงิน–แดง. [Asset provenance](docs/assets/README.md).

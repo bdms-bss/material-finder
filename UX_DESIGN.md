@@ -30,7 +30,7 @@
 
 ## Visual system
 
-สีหลักเขียว teal ที่มี contrast กับ white; พื้นหลัง off-white และ border บาง. Hierarchy เน้นชื่อรายการ → code → L0/budget → supporting mapping. ใช้ Noto Sans Thai พร้อม system fallback และ monospace เฉพาะรหัส. ข้อความสำคัญไม่ถูกตัดด้วย ellipsis; group description บน card เป็น preview และมีคำอธิบายเต็มใน detail.
+สีหลักน้ำเงิน BDMS และแดง accent ตามโลโก้ พร้อมสีปุ่มที่เข้มพอให้ contrast กับ white; พื้นหลัง off-white และ border บาง. Hierarchy เน้นชื่อรายการ → code → L0/budget → supporting mapping. ใช้ Noto Sans Thai พร้อม system fallback และ monospace เฉพาะรหัส. ข้อความสำคัญไม่ถูกตัดด้วย ellipsis; group description บน card เป็น preview และมีคำอธิบายเต็มใน detail.
 
 ## Verified before publishing
 
@@ -43,3 +43,9 @@
 ## Recommended user UAT
 
 ให้ตัวแทนผู้ขอซื้อ Procurement และ budget owner ลองหาสินค้า 3–5 แบบ เช่น ชื่อไทย, รหัสตรง, ชื่อไม่ตรงระบบ และภาพ. วัด task completion, wrong-code selection, เวลาใช้ค้นหา, ความเข้าใจ CAPEX/OPEX และความเข้าใจว่า Group ไม่ใช่ Material code. ตรวจ browser/อุปกรณ์จริงขององค์กร รวมถึง zoom, screen reader และเครื่อง RAM ต่ำก่อนสรุปการเข้าถึงครบถ้วน.
+
+## Material Master clarification and branding update
+
+ใช้ชื่อและข้อความกลาง ๆ “ค้นหาข้อมูล Material Master” พร้อมโลโก้ BDMS จริงแบบเวกเตอร์. หลีกเลี่ยงการสื่อว่าเป็น Catalog หรือพร้อมคีย์ PR: Catalog เป็นข้อมูลระดับ Plant ซึ่งไม่ได้รวมในเว็บนี้ และไม่ทราบสถานะ availability.
+
+Result category cards เป็น faceted navigation: แยกยอด Material codes/Groups; เปลี่ยนหมวดได้โดยคง counts ของหมวดอื่นตามคำค้น. แยก Direct Pay (Group Z*) ออกจาก Taxonomy L0; ไม่สร้าง L0 ขึ้นแทนข้อมูลที่ไม่มี. Exclude Z00000000 และ M* ตั้งแต่ import และมี frontend guard เพิ่มเติม.
