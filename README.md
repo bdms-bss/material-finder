@@ -8,17 +8,19 @@ GitHub Settings → Pages → Deploy from a branch → main → /docs. URL: http
 
 สำหรับ local: `python -m http.server 8000 --directory docs`
 
-## Microsoft Copilot ขององค์กร
+## AI login โดยไม่ต้องใช้ IT admin
 
-ฝังแชต Copilot Studio ผ่าน Microsoft Web Chat และลงชื่อเข้าใช้บัญชีองค์กรด้วย Microsoft Entra ID. ไม่มีการใช้ OpenAI API key อีกต่อไป.
+ใช้ [OpenRouter OAuth + PKCE](https://openrouter.ai/docs/guides/overview/auth/oauth) บน GitHub Pages ได้โดยตรง ไม่มี backend, Entra app registration, shared API key หรือ client secret. ผู้ใช้กด **เชื่อมบัญชี AI → Login ด้วย OpenRouter** และอนุญาตเว็บบนหน้า OpenRouter. เว็บได้รับ key ของผู้ใช้จาก OAuth และเก็บไว้ใน sessionStorage ของแท็บ ไม่อยู่ใน repository หรือ URL. สมาชิก ChatGPT/Claude/Copilot ไม่ใช่เครดิต OpenRouter; ผู้ใช้ต้องมีบัญชี OpenRouter และเครดิต/วงเงินที่ใช้ได้.
 
-**สถานะ:** เตรียม integration แล้ว แต่ยังไม่เชื่อม tenant/agent จริง ต้องให้ผู้ดูแลตั้งค่าใน `docs/copilot-config.json` ตาม [คู่มือติดตั้ง](COPILOT_SETUP.md). เมื่อไม่มี configuration ปุ่ม login จะปิดและแสดงสถานะอย่างชัดเจน.
+เลือก OpenAI GPT-4.1 mini, Google Gemini 2.5 Flash หรือ Anthropic Claude Sonnet 4.5. โมเดลและราคาเปลี่ยนแปลงได้ ข้อผิดพลาดจากเครดิต/โมเดลไม่พร้อมจะแสดงในเว็บ ไม่มีการเปลี่ยนโมเดลหรือเติมเงินให้อัตโนมัติ.
 
-ผู้ใช้กด “Copilot องค์กร” → “ลงชื่อเข้าใช้ด้วย Microsoft” → ค้นหาสินค้า → “ถาม Copilot”. เว็บส่งคำค้น, รูปที่เลือก (ถ้ามี), และ candidate 25 รายการแรกตามตัวกรองปัจจุบัน พร้อม GL, Asset และ Taxonomy ไปยัง agent. แชตไม่เห็น master ทั้งหมดโดยอัตโนมัติ. หากไม่พบ candidate ให้ agent ขอข้อมูลเพิ่มและเสนอคำค้นใหม่; ต้องเพิ่ม knowledge/tool ฝั่งองค์กรหากต้องการให้ agent ค้น master ทั้งหมดเอง.
+ก่อนส่งต้องยืนยันว่าคำค้น รูป และ candidate จะส่งไปยัง OpenRouter และผู้ให้บริการโมเดล ซึ่งเป็นบริการภายนอกองค์กร. การถามหนึ่งครั้งใช้สูงสุดสอง AI calls: (1) ระบุสินค้า/สร้างคำค้นจากข้อความหรือภาพ (2) แนะนำจาก candidate ที่ค้นได้ใน master ทั้งหมดบน browser (ไม่รวม material deletion flag). AI ไม่ถูกจำกัดด้วยตัวกรองผลค้นหาปกติ. ส่งเฉพาะ top 35 candidate ในรอบที่สอง. เมื่อไม่พบ candidate จะไม่เรียก AI รอบที่สองและไม่เสนอรหัส.
 
-ภาพแนบผ่าน message attachment; การวิเคราะห์ภาพขึ้นกับความสามารถและการตั้งค่า agent/channel ขององค์กร ต้องทดสอบกับ agent จริงก่อนประกาศว่าใช้งานได้. ยังไม่ได้ทดสอบ login, token exchange หรือคำตอบ AI จริง เนื่องจากยังไม่มี tenant/agent configuration.
+แสดงเฉพาะ recommendation ที่ id ตรงกับ candidate จริง ส่วน Material/Group, GL, Asset, Taxonomy และ CAPEX/OPEX บนหน้ารายละเอียดอ้างอิง local master โดยตรง. ข้อความเหตุผลและความเหมาะสมจาก AI ยังต้องให้ผู้ใช้ตรวจสอบ. ภาพใช้ image input ของโมเดล ไม่เก็บภาพใน repository.
 
-การ login ควบคุมการเข้าถึง agent เท่านั้น หน้า GitHub Pages และ catalog ยังคงเป็น public. ต้องตั้ง agent ให้ require sign-in และกำหนดสิทธิ์ฝั่ง Copilot Studio/Entra; การปิดปุ่มในเว็บไม่ใช่การป้องกัน agent. ไม่ใส่ client secret, Direct Line secret หรือ access token ใน repo. MSAL จัดการ user session ใน sessionStorage ของ browser.
+**ตัดการเชื่อมต่อ** ลบ key ใน browser และยกเลิกคำขอค้าง แต่ไม่ใช่การ revoke key บน OpenRouter; ใช้ลิงก์ **จัดการ key / วงเงิน** เพื่อตรวจค่าใช้จ่ายหรือยกเลิก key. ไม่ใส่ password, session cookie หรือ token จากบัญชี AI อื่นในเว็บนี้.
+
+ดู [รายละเอียดการเชื่อมต่อและ UAT](AI_LOGIN.md). การทดสอบใน repo ใช้ mock สำหรับ OAuth/API และทดสอบ local browser; ยังไม่มีการอนุญาตบัญชีจริง/เรียกโมเดลแบบคิดค่าใช้จ่ายในการพัฒนา.
 
 ## ข้อมูลและหลักเกณฑ์
 
