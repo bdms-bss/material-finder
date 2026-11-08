@@ -29,7 +29,9 @@ GitHub Settings → Pages → Deploy from a branch → main → /docs. URL: http
 - Join ด้วย Material Group; GL ใช้ `sap_MaterialGroup_GL` และเก็บทุก Department type แยกกัน
 - Asset mapping ใช้ `sap_MaterialGroup_Asset`; GL/Asset descriptions จาก master โดยตรง
 - Taxonomy ใช้ `Master_DataTaxonomy`; ไม่ apply แผ่น `New_Edit` ซึ่งเป็นรายการขอแก้ไข
-- Material ที่มี deletion flag ถูกซ่อนโดยค่าเริ่มต้น; group INACTIVE ยังอาจพบได้ตามชื่อใน master ให้ตรวจสอบก่อนใช้
+- ตัด Material ที่ `Deletion at Client Level = X` ออกจากข้อมูลที่เผยแพร่
+- ตัด Material groups ที่ description ขึ้นต้น `INACTIVE` และ Materials ที่ผูกกับกลุ่มเหล่านี้หรือมี Material Group Description ขึ้นต้น `INACTIVE` (trim และไม่แยกตัวพิมพ์เล็กใหญ่)
+- ใช้ข้อมูลหลังตัดรายการเดียวกันกับผลค้นหา สถิติ และ AI; ไม่มีตัวเลือกเปิดแสดงรายการที่ตัดออก
 - กติกา BDMS BSS: มี Asset class → CAPEX; มี GL-A (Admin expense) หรือ GL-C (Cost) → OPEX; มีทั้งสองประเภท mapping → CAPEX/OPEX
 - ไม่มีทั้งสอง mapping → ไม่พบข้อมูลจัดประเภท; GL-S เพียงอย่างเดียวไม่ใช้สรุป OPEX
 - ใช้กติกานี้ทั้ง Material และ Material group โดยอ้างอิง group mapping; ไม่ใช้การอยู่ในแผ่น MaterialCAPEX มา override กติกา

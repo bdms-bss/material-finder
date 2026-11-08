@@ -4,7 +4,13 @@ def rows(s,n):
  for r in w[s].iter_rows(min_row=n,values_only=True):
   yield ['' if v is None else str(v).strip() for v in r]
 groups={}
+inactive_groups=set()
+def inactive(value):
+ return str(value or "").strip().upper().startswith("INACTIVE")
 for r in rows('sap_MaterialGroup',6):
+ if r[1] and inactive(r[2]):
+  inactive_groups.add(r[1])
+  continue
  if r[1]: groups[r[1]]={'code':r[1],'name':r[2],'levels':[],'gl':{},'assets':[],'keywords':[]}
 for r in rows('Master_DataTaxonomy',5):
  if r[11] in groups:
@@ -16,7 +22,9 @@ for r in rows('sap_MaterialGroup_Asset',6):
 capex={r[5] for r in rows('Master_MaterialCAPEX',6) if r[5]}
 materials=[]
 for r in rows('sap_MaterialCode',6):
- if r[1]:materials.append([r[1],r[2],r[5],r[3],r[4],bool(r[7]),r[1] in capex])
+ if not r[1] or r[7].strip().upper() == 'X' or r[5] in inactive_groups or inactive(r[13]):
+  continue
+ materials.append([r[1],r[2],r[5],r[3],r[4],False,r[1] in capex])
 data={'groups':list(groups.values()),'materials':materials,'gl':{r[1]:r[3] for r in rows('sap_GL',5) if r[1]},'assets':{r[1]:r[2] for r in rows('sap_AssetClass',5) if r[1]},'source':'H BDMS DCT-PRD-DataTaxonomy(20261030).xlsx','date':'2026-10-30'}
 p=pathlib.Path(__file__).resolve().parents[1]/'docs/data.json';p.write_text(json.dumps(data,ensure_ascii=False,separators=(',',':')))
 print(json.dumps({'materials':len(materials),'groups':len(groups),'capex':len(capex),'bytes':p.stat().st_size}))
