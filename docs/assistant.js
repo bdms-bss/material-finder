@@ -33,7 +33,7 @@ export async function suggest(query,image,retrieve,openRecord){openAssistant();i
   $('assistantOutput').append(paragraph('AI เข้าใจว่าใกล้เคียง: '+best.th),paragraph('คำค้นเพิ่มเติม: '+best.terms.join(' / ')));
   if(!candidates.length){status('ไม่พบรหัสใน master ที่ตรงกับสิ่งที่ AI เข้าใจ');return}
   const ranked=await runAI({task:'rank',query:query+' '+best.th+' '+best.en,image,candidates});
-  const generic=image?candidates.find(c=>!c.materialCode&&best.terms.some(t=>c.groupName.toLowerCase()===t.toLowerCase())):null;
+  const generic=image?candidates.find(c=>c.materialCode&&best.terms.some(t=>c.groupName.toLowerCase()===t.toLowerCase())):null;
   const ordered=generic?[{id:generic.id,score:1},...ranked]:ranked;
   const records=verifiedRanks(candidates,ordered);
   showCards(records,openRecord,'ใกล้เคียงจาก AI บนเครื่อง · ข้อมูล Master อ้างอิง · ตรวจ Catalog ของ Plant ก่อนใช้');

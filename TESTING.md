@@ -47,3 +47,13 @@
 - โหลดโลโก้ SVG สำเร็จ และ headline เป็นข้อความกลาง ๆ Material Master
 - คำว่า Catalog ใช้เฉพาะอธิบายขอบเขต/การตรวจ Plant ไม่ใช้เป็นชื่อผลค้นหา
 - ตรวจ axe เพิ่มใน summary-facet state รวมถึง home/detail/AI/mobile results: 0 violations ในชุดตรวจ WCAG ที่ใช้อยู่
+
+## Material-code-only / compact type row
+
+- หน้าแรกและ browse โดยไม่มีคำค้นไม่แสดง summary; ส่งคำค้นจึงแสดงปุ่มประเภทหนึ่งแถว สูงไม่เกิน 48 px
+- ผลลัพธ์และ AI candidates ทุกตัวมี Material code ไม่มี Group-only cards
+- ค้นด้วย Group `B01031011` ได้จำนวน Material codes ตรงกับ master; ค้นด้วย Group description ได้รหัสสินค้าเช่นกัน
+- Group ที่ไม่มี Material code แสดง context notice และไม่มีการ์ด Group ให้เลือก
+- Direct Pay อยู่ในตัวกรองประเภท, summary, badge และเก็บ GL/Asset accounting เดิมใน detail
+- ยอด summary ไม่ซ้ำระหว่าง OPEX กับ Direct Pay และผลรวมเท่ากับ Material codes ที่พบ
+- ตรวจ Desktop และ mobile 390/320 px: strip อยู่แถวเดียว มือถือเลื่อนภายในแถว ไม่มี page overflow; axe ไม่พบ violations ในสถานะที่ตรวจ

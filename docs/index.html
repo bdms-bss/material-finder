@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#0872b9">
   <meta name="description" content="ค้นหา Material code และ Material group สำหรับอ้างอิงและวางแผนงบประมาณ พร้อม Taxonomy, GL และ Asset class จาก BDMS master data">
   <title>Material Master · BDMS BSS</title>
-  <link rel="stylesheet" href="style.css?v=master-3">
+  <link rel="stylesheet" href="style.css?v=material-4">
 </head>
 <body>
   <a class="skip-link" href="#query">ข้ามไปช่องค้นหา</a>
@@ -50,11 +50,11 @@
         <details id="filterPanel" open>
           <summary><span><span aria-hidden="true">☷</span> ตัวกรองการค้นหา</span><span class="filter-chevron" aria-hidden="true">⌄</span></summary>
           <div class="filter-content">
-            <label for="kind">ประเภทข้อมูล</label><select id="kind"><option value="all">ทั้งหมด</option><option value="materials">Material code</option><option value="groups">Material group</option></select>
+            <div class="result-type-note"><b>แสดง Material code</b><p>ค้นหาได้จากรหัสหรือชื่อ Material group เพื่อดูรหัสสินค้าที่เชื่อมโยง</p></div>
             <label for="commodity">หมวดผลค้นหา</label><select id="commodity"><option value="">ทุกหมวดสินค้า</option></select>
-            <label for="budget">ประเภทค่าใช้จ่าย</label><select id="budget"><option value="">ทุกประเภท</option><option value="capex">CAPEX เท่านั้น</option><option value="opex">OPEX เท่านั้น</option><option value="both">CAPEX / OPEX</option><option value="unknown">ยังไม่มีข้อมูลจัดประเภท</option></select>
+            <label for="budget">ประเภท Material group</label><select id="budget"><option value="">ทุกประเภท</option><option value="capex">CAPEX เท่านั้น</option><option value="opex">OPEX เท่านั้น</option><option value="both">CAPEX / OPEX</option><option value="direct-pay">Direct Pay · Z*</option><option value="unknown">ยังไม่มีข้อมูลจัดประเภท</option></select>
             <button id="resetFilters" class="reset-button">ล้างตัวกรองทั้งหมด</button>
-            <details class="budget-guide"><summary>CAPEX / OPEX ต่างกันอย่างไร?</summary><p><b>CAPEX</b> มี Asset class<br><b>OPEX</b> มี GL-A หรือ GL-C<br><b>CAPEX / OPEX</b> มีทั้งสอง mapping ให้เลือกตามวัตถุประสงค์ของ PR</p></details>
+            <details class="budget-guide"><summary>ประเภทกลุ่มกำหนดอย่างไร?</summary><p><b>Direct Pay</b> Group Z* ที่ไม่ถูก exclude<br><b>CAPEX</b> มี Asset class<br><b>OPEX</b> มี GL-A หรือ GL-C<br><b>CAPEX / OPEX</b> มีทั้งสอง mapping ให้เลือกตามวัตถุประสงค์ของ PR</p></details>
           </div>
         </details>
         <div class="sidebar-tip"><span class="tip-icon" aria-hidden="true">✧</span><h3>ยังไม่รู้ชื่อที่ใช้ในระบบ?</h3><p>อธิบายสิ่งที่ต้องการด้วยภาษาของคุณ แล้วค้นหาจากคำอธิบายหรือภาพใกล้เคียง</p><button id="sidebarAI" class="text-action">ลองให้ AI ช่วย <span aria-hidden="true">→</span></button><small>ฟรี · ไม่ต้องลงชื่อเข้าใช้</small></div>
@@ -62,11 +62,11 @@
       <div class="results" id="resultsSection" aria-busy="true">
         <div class="results-head"><div><div class="eyebrow">MATERIAL MASTER</div><h2 id="resultTitle">ข้อมูลอ้างอิง Material Master</h2></div><div class="result-tools"><label for="sort" class="sr-only">เรียงลำดับผลลัพธ์</label><select id="sort" aria-label="เรียงลำดับผลลัพธ์"><option value="relevance">ตรงกับคำค้นมากที่สุด</option><option value="name">ชื่อรายการ A–Z</option><option value="code">รหัสรายการ A–Z</option></select></div></div>
         <p id="status" role="status" aria-live="polite">กำลังโหลดข้อมูล…</p>
-        <section id="resultSummary" class="result-summary" hidden aria-labelledby="summaryTitle"><div class="summary-heading"><h3 id="summaryTitle">ผลค้นหาแยกตามหมวด</h3><p>เลือกการ์ดเพื่อกรองต่อ · จำนวนแยกรหัสสินค้าและกลุ่มสินค้า</p></div><div id="summaryCards" class="summary-grid"></div></section>
-        <div id="activeFilters" class="active-filters" aria-label="ตัวกรองที่ใช้"></div>
+        <section id="resultSummary" class="result-summary" hidden aria-labelledby="summaryTitle"><div class="summary-heading"><h3 id="summaryTitle">รหัสสินค้าตามประเภท</h3><p>เลือกประเภทเพื่อกรอง Material code</p></div><div id="summaryCards" class="summary-grid" role="group" aria-label="กรองประเภท Material group"></div></section>
+        <p id="groupMatchNotice" class="group-match-notice" role="status" hidden></p><div id="activeFilters" class="active-filters" aria-label="ตัวกรองที่ใช้"></div>
         <section id="welcome" class="welcome" hidden aria-label="แนะนำวิธีเริ่มค้นหา">
           <div class="welcome-heading"><span class="welcome-icon" aria-hidden="true">⌕</span><div><h3>ค้นหาข้อมูลรหัสและกลุ่มสินค้า</h3><p>พิมพ์ชื่อสินค้า รหัส หรือเลือกหมวดเพื่อดูข้อมูล Master</p></div></div>
-          <div class="discovery-grid"><button data-commodity="B"><span class="category-icon mint" aria-hidden="true">✚</span><span><strong>เวชภัณฑ์และวัสดุแพทย์</strong><small>ถุงมือ หน้ากาก อุปกรณ์ใช้สิ้นเปลือง</small></span><span aria-hidden="true">→</span></button><button data-commodity="C"><span class="category-icon blue" aria-hidden="true">⌁</span><span><strong>เครื่องมือแพทย์</strong><small>เครื่องวัด เครื่องติดตามสัญญาณชีพ</small></span><span aria-hidden="true">→</span></button><button data-commodity="D"><span class="category-icon violet" aria-hidden="true">▱</span><span><strong>คอมพิวเตอร์และไอที</strong><small>โน้ตบุ๊ก จอภาพ และอุปกรณ์</small></span><span aria-hidden="true">→</span></button><button data-commodity="E"><span class="category-icon sand" aria-hidden="true">▤</span><span><strong>ของใช้และอุปกรณ์สำนักงาน</strong><small>เก้าอี้ โต๊ะ และวัสดุสำนักงาน</small></span><span aria-hidden="true">→</span></button></div>
+          <p class="welcome-instruction">พิมพ์ชื่อสินค้า Material code หรือ Material group ในช่องค้นหา เพื่อดูรหัสสินค้าที่เกี่ยวข้อง</p>
           <button id="browseAll" class="browse-all">หรือดูรายการทั้งหมด <span aria-hidden="true">→</span></button>
           <div class="workflow-note"><span>01 <b>ค้นหาสิ่งที่ต้องการ</b></span><span aria-hidden="true">→</span><span>02 <b>ตรวจรายละเอียดและบัญชี</b></span><span aria-hidden="true">→</span><span>03 <b>ตรวจ Catalog ของ Plant</b></span></div>
         </section>
@@ -82,6 +82,6 @@
   <dialog id="assistantPanel" class="assistantPanel" hidden aria-labelledby="assistantTitle"><div class="assistantHead"><div><div class="eyebrow">MATERIAL SEARCH ASSISTANCE</div><h2 id="assistantTitle">ค้นหาจากคำอธิบายหรือภาพ</h2></div><button id="closeAssistant" class="icon-button" aria-label="ปิดผู้ช่วย AI">×</button></div><div class="assistant-body"><div class="ai-trust"><span aria-hidden="true">✧</span><p><b>ใช้ฟรี ไม่ต้องลงชื่อเข้าใช้</b><br>คำค้นและภาพประมวลผลบนเครื่องของคุณ</p></div><label for="assistantQuery">อธิบายสิ่งที่คุณต้องการ</label><textarea id="assistantQuery" rows="3" maxlength="2000" placeholder="เช่น อยากได้ถุงมือใส่ตรวจคนไข้"></textarea><p id="assistantImageNote" class="field-hint" hidden>ใช้ภาพสินค้าที่แนบในหน้าค้นหาประกอบด้วย</p><details class="ai-download-info"><summary>ครั้งแรกดาวน์โหลดโมเดลประมาณ 118–154 MB</summary><p>ใช้อินเทอร์เน็ตดาวน์โหลดโมเดลภาษา ~118 MB หรือโมเดลภาพ ~154 MB พร้อม runtime จากนั้น browser จะเก็บ cache ตามที่อุปกรณ์อนุญาต เครื่องที่หน่วยความจำน้อยอาจใช้เวลานาน</p></details><button id="sendContext" class="button-primary full-width">✧ วิเคราะห์และแนะนำรายการ</button><div class="ai-status-box"><progress id="aiProgress" max="100" hidden aria-label="ความคืบหน้าการประมวลผล AI"></progress><p id="assistantStatus" role="status" aria-live="polite">พร้อมช่วยค้นหา พิมพ์สิ่งที่ต้องการแล้วกดวิเคราะห์</p><button id="cancelAI" class="text-action" hidden>หยุดการประมวลผล</button></div><div id="assistantOutput" aria-live="polite"></div><p class="assistantNotice">AI แนะนำรายการใกล้เคียง ไม่ยืนยันรุ่น ขนาด หรือชนิดยา โปรดตรวจรายละเอียดก่อนนำรหัสไปใช้</p></div></dialog>
   <dialog id="helpDialog" class="help-dialog" aria-labelledby="helpTitle"><div class="dialog-topbar"><h2 id="helpTitle">เริ่มใช้งาน Material Master</h2><button id="closeHelp" class="icon-button" aria-label="ปิดวิธีใช้งาน">×</button></div><div class="dialog-body"><ol class="help-steps"><li><h3>ค้นหาด้วยสิ่งที่คุณรู้</h3><p>ใช้ชื่อสินค้า ภาษาไทยหรืออังกฤษ รหัส Material หรือ Material group ก็ได้ หากมีเพียงภาพ ให้เลือก “ค้นหาจากรูปภาพ”</p></li><li><h3>เลือกและตรวจข้อมูล</h3><p>ดูหมวด L0 และประเภทค่าใช้จ่าย แล้วเปิดรายละเอียดเพื่อตรวจ Group, GL ตาม Department และ Asset class</p></li><li><h3>ตรวจ Catalog ของ Plant ก่อนใช้</h3><p>Material code เป็นรหัสใน Master ส่วน Material group เป็นกลุ่มสินค้า ข้อมูลนี้ไม่มีรายการ Catalog ที่แยกตาม Plant จึงต้องตรวจสอบ Catalog ของ Plant ก่อนนำรหัสไปใช้เปิด PR</p></li></ol><div class="info-box"><h3>ขอบเขตข้อมูล</h3><p>Catalog แยกรายการตาม Plant และมีจำนวนรายการมาก ระบบนี้จึงแสดงเฉพาะ Material Master ส่วนกลาง ไม่ได้แสดงหรือยืนยันความพร้อมของ Catalog ใน Plant</p><p>อ้างอิง Excel snapshot 30 ต.ค. 2026 โดยวันที่ปรับปรุงแต่ละ sheet อาจต่างกัน ตัด Deletion X, INACTIVE, (CANCEL), Group Z00000000 และ M* ก่อนเว็บโหลดข้อมูล · Group Z* ที่เหลือเป็น Direct Pay โดยไม่ได้เติมเป็น L0 ใน Taxonomy</p><p>CAPEX = มี Asset class · OPEX = มี GL-A/GL-C · มีทั้งสอง mapping = CAPEX/OPEX</p></div></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-  <script type="module" src="app.js?v=master-3"></script>
+  <script type="module" src="app.js?v=material-4"></script>
 </body>
 </html>

@@ -1,16 +1,16 @@
-import {excludedGroupCode,isDirectPay,resultCategory,summarizeResults} from './master-core.js?v=master-3';
-import {openAssistant,cancelAssistant,suggest} from './assistant.js?v=master-3';
+import {excludedGroupCode,isDirectPay,resultCategory,materialGroupType,groupTypeLabels,summarizeMaterialTypes} from './master-core.js?v=material-4';
+import {openAssistant,cancelAssistant,suggest} from './assistant.js?v=material-4';
 import {classifyBudget,budgetLabels} from './classification.js';
 
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const normalize=value=>String(value).toLowerCase().normalize('NFKC');
 const synonyms={'laptop':'notebook portable computer','ถุงมือ':'glove','เครื่องวัดความดัน':'blood pressure sphygmomanometer','คอมพิวเตอร์':'computer','โน้ตบุ๊ก':'notebook laptop','รถเข็น':'wheelchair','เตียง':'bed','หน้ากาก':'mask','เครื่องพิมพ์':'printer','เก้าอี้':'chair','แอร์':'air conditioner','กระดาษ':'paper'};
-let db,groups,items=[],results=[],baseResults=[],shown=20,browseAll=false,imageMode=false,image=null,selectedRecord=null,toastTimer;
+let db,groups,items=[],results=[],baseResults=[],shown=20,searched=false,browseAll=false,imageMode=false,image=null,selectedRecord=null,toastTimer;
 const recordId=i=>i.kind+':'+i.code;
 const budget=i=>budgetLabels[classifyBudget(i.g)];
 const l0=i=>i.g.levels[0]?.some(Boolean)?i.g.levels[0].filter(Boolean).join(' · '):'ยังไม่มีข้อมูล L0';
-const hasFilters=()=>['kind','commodity','budget'].some(id=>$(id).value!==(id==='kind'?'all':''));
+const hasFilters=()=>['commodity','budget'].some(id=>$(id).value!=='');
 function notify(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,3500)}
 async function copy(text,button){
  try{
@@ -29,18 +29,21 @@ function tokensFor(query){const terms=normalize(query).split(/\s+/).filter(Boole
 function search({scroll=false}={}){
  if(!db)return;
  shown=20;const query=$('query').value.trim(),q=normalize(query),tokens=tokensFor(query);
- const start=!q&&!hasFilters()&&!browseAll;
- $('welcome').hidden=!start;$('resultSummary').hidden=start;$('sort').disabled=start;$('emptyState').hidden=true;
+ const start=(!searched||!q)&&!browseAll;
+ $('welcome').hidden=!start;$('resultSummary').hidden=start||!searched||!q;$('sort').disabled=start;$('emptyState').hidden=true;
  $('clearQuery').hidden=!query;
  renderFilters();
- if(start){results=[];$('resultTitle').textContent='ข้อมูลอ้างอิง Material Master';$('status').textContent='เลือกคำแนะนำ หรือพิมพ์ชื่อสินค้าในช่องค้นหา';$('list').replaceChildren();$('more').hidden=true;return}
+ if(start){results=[];$('groupMatchNotice').hidden=true;$('resultTitle').textContent='ข้อมูลอ้างอิง Material Master';$('status').textContent='เลือกคำแนะนำ หรือพิมพ์ชื่อสินค้าในช่องค้นหา';$('list').replaceChildren();$('more').hidden=true;return}
  baseResults=items.map(i=>{
-  let score=q?(normalize(i.code)===q?1000:normalize(i.name).includes(q)?100:0):1;
+  let score=q?(normalize(i.code)===q?1000:normalize(i.g.code)===q?500:normalize(i.name).includes(q)?100:normalize(i.g.name).includes(q)?60:0):1;
   if(q)for(const t of tokens)if(i.text.includes(t))score+=10;
   return {...i,score};
- }).filter(i=>i.score>0&&($('kind').value==='all'||i.kind===$('kind').value)&&(!$('budget').value||classifyBudget(i.g)===$('budget').value));
+ }).filter(i=>i.score>0&&(!$('commodity').value||resultCategory(i).key===$('commodity').value));
  renderSummary();
- results=baseResults.filter(i=>!$('commodity').value||resultCategory(i).key===$('commodity').value);
+ results=baseResults.filter(i=>!$('budget').value||materialGroupType(i.g)===$('budget').value);
+ const matchedGroups=q?db.groups.filter(g=>normalize(g.code)===q||normalize(g.name).includes(q)).slice(0,3):[];
+ $('groupMatchNotice').hidden=Boolean(baseResults.length||!matchedGroups.length);
+ if(!baseResults.length&&matchedGroups.length)$('groupMatchNotice').textContent='พบ Material group '+matchedGroups.map(g=>g.code+' · '+g.name).join(', ')+' แต่ไม่พบ Material code ที่ตรงกับคำค้นและตัวกรองปัจจุบัน จึงยังไม่มีรหัสสินค้าให้เลือก';
  const sort=$('sort').value;
  results.sort((a,b)=>sort==='code'?a.code.localeCompare(b.code):sort==='name'?a.name.localeCompare(b.name):b.score-a.score||a.name.localeCompare(b.name));
  $('resultTitle').textContent=query?`ผลการค้นหา “${query}”`:'รายการใน Material Master';
@@ -48,30 +51,30 @@ function search({scroll=false}={}){
  if(scroll)$('resultsSection').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
 }
 function renderSummary(){
- const buckets=summarizeResults(baseResults),area=$('summaryCards');area.replaceChildren();
- $('resultSummary').hidden=!baseResults.length;
- const totals={key:'',name:'ทั้งหมด',note:'ผลจากคำค้นและตัวกรองปัจจุบัน',materials:baseResults.filter(i=>i.kind==='materials').length,groups:baseResults.filter(i=>i.kind==='groups').length,total:baseResults.length};
- for(const bucket of [totals,...buckets]){
-  const button=document.createElement('button');button.type='button';button.className='summary-card';button.dataset.category=bucket.key;button.setAttribute('aria-pressed',String($('commodity').value===bucket.key));
-  button.innerHTML=`<span class="summary-category">${esc(bucket.key&&bucket.key!=='direct-pay'&&bucket.key!=='unmapped'?'L0 · '+bucket.key:bucket.key==='direct-pay'?'GROUP Z*':'MATERIAL MASTER')}</span><strong>${esc(bucket.name)}</strong><span class="summary-counts"><span><b>${bucket.materials.toLocaleString()}</b> Material codes</span><span><b>${bucket.groups.toLocaleString()}</b> Material groups</span></span><span class="summary-card-action">${$('commodity').value===bucket.key?'กำลังแสดงหมวดนี้':'เลือกดูรายการ'} <span aria-hidden="true">→</span></span>`;
-  button.onclick=()=>{const next=$('commodity').value===bucket.key?'':bucket.key;$('commodity').value=next;search();[...$('summaryCards').querySelectorAll('button')].find(b=>b.dataset.category===next)?.focus({preventScroll:true})};area.append(button);
+ const area=$('summaryCards');area.replaceChildren();
+ $('resultSummary').hidden=!searched||!$('query').value.trim()||!baseResults.length;
+ const buckets=[{key:'',name:'ทั้งหมด',total:baseResults.length},...summarizeMaterialTypes(baseResults)];
+ for(const bucket of buckets){
+  const button=document.createElement('button');button.type='button';button.className='summary-card';button.dataset.type=bucket.key;button.setAttribute('aria-pressed',String($('budget').value===bucket.key));
+  button.setAttribute('aria-label',bucket.name+' '+bucket.total.toLocaleString()+' Material codes');
+  button.innerHTML=`<span>${esc(bucket.name)}</span><b>${bucket.total.toLocaleString()}</b>`;
+  button.onclick=()=>{const next=$('budget').value===bucket.key?'':bucket.key;$('budget').value=next;search();[...$('summaryCards').querySelectorAll('button')].find(b=>b.dataset.type===next)?.focus({preventScroll:true})};area.append(button);
  }
 }
 function renderFilters(){
  const area=$('activeFilters');area.replaceChildren();
- for(const id of ['kind','commodity','budget']){
-  const select=$(id);if(select.value===(id==='kind'?'all':''))continue;
-  const b=document.createElement('button');b.textContent=select.selectedOptions[0].textContent+' ×';b.setAttribute('aria-label','ล้างตัวกรอง '+select.selectedOptions[0].textContent);b.onclick=()=>{select.value=id==='kind'?'all':'';search()};area.append(b);
+ for(const id of ['commodity','budget']){
+  const select=$(id);if(!select.value)continue;
+  const b=document.createElement('button');b.textContent=select.selectedOptions[0].textContent+' ×';b.setAttribute('aria-label','ล้างตัวกรอง '+select.selectedOptions[0].textContent);b.onclick=()=>{select.value='';search()};area.append(b);
  }
  $('resetFilters').disabled=!hasFilters();
 }
 function renderResults(){
- const materials=results.filter(i=>i.kind==='materials').length,groups=results.length-materials;
- $('status').textContent=`พบ ${materials.toLocaleString()} Material codes และ ${groups.toLocaleString()} Material groups${results.length?' · แสดง '+Math.min(shown,results.length).toLocaleString()+' รายการ':''}`;
+ $('status').textContent=`พบ ${results.length.toLocaleString()} Material codes${results.length?' · แสดง '+Math.min(shown,results.length).toLocaleString()+' รายการ':''}`;
  $('list').innerHTML=results.slice(0,shown).map((i,n)=>{
-  const type=classifyBudget(i.g),gl=[...new Set(Object.values(i.g.gl))];
+  const type=materialGroupType(i.g),gl=[...new Set(Object.values(i.g.gl))];
   return `<article class="card" aria-labelledby="result-${n}">
-   <div class="card-top"><div><span class="record-type">${i.m?'MATERIAL CODE · รหัสใน MASTER':'MATERIAL GROUP · กลุ่มสินค้า'}</span><span class="code">${esc(i.code)}</span></div><span class="record-badges">${isDirectPay(i.g.code)?'<span class="route-badge">Direct Pay</span>':''}<span class="badge badge-${type}">${esc(budget(i))}</span></span></div>
+   <div class="card-top"><div><span class="record-type">${i.m?'MATERIAL CODE · รหัสใน MASTER':'MATERIAL GROUP · กลุ่มสินค้า'}</span><span class="code">${esc(i.code)}</span></div><span class="record-badges"><span class="badge badge-${type}">${esc(groupTypeLabels[type])}</span></span></div>
    <h3 id="result-${n}"><button class="result-link" data-detail="${n}">${esc(i.name)}</button></h3>
    <span class="l0"><b>L0</b> ${esc(l0(i))}</span>
    <dl class="card-meta"><div><dt>Material group</dt><dd>${esc(i.g.code)}<span class="group-name">${esc(i.g.name)}</span></dd></div><div><dt>GL account</dt><dd>${esc(gl.join(' / ')||'ยังไม่มีข้อมูล')}</dd></div><div><dt>Asset class</dt><dd>${esc(i.g.assets.join(', ')||'ยังไม่มีข้อมูล')}</dd></div></dl>
@@ -94,7 +97,7 @@ function detail(i){
  $('detailBody').scrollTop=0;
 }
 function summary(i){return [i.name,i.m?'Material code: '+i.code:'Material code: ไม่มี (รายการระดับกลุ่ม)','Material group: '+i.g.code+' — '+i.g.name,'L0: '+l0(i),'ประเภทค่าใช้จ่าย: '+budget(i),'ประเภทกลุ่ม: '+(isDirectPay(i.g.code)?'Direct Pay (Z*)':'ตาม Commodity L0'),...Object.entries(i.g.gl).map(([d,c])=>'GL-'+d+': '+c+' — '+(db.gl[c]||'')),'Asset class: '+(i.g.assets.join(', ')||'ยังไม่มีข้อมูล'),...i.g.levels.flatMap((l,n)=>l.some(Boolean)?['L'+n+': '+l[0]+' — '+l[1]]:[]),'อ้างอิง Material Master 30 ต.ค. 2026','ไม่มีข้อมูล Catalog ระดับ Plant ในระบบนี้ โปรดตรวจสอบก่อนนำไปเปิด PR'].join('\n')}
-function resetFilters(){for(const id of ['kind','commodity','budget'])$(id).value=id==='kind'?'all':'';browseAll=false;search()}
+function resetFilters(){for(const id of ['commodity','budget'])$(id).value='';browseAll=false;search()}
 function setMode(isImage){
  imageMode=isImage;$('textSearchPanel').hidden=isImage;$('imagePanel').hidden=!isImage;
  for(const [id,selected]of [['textTab',!isImage],['imageTab',isImage]]){$(id).setAttribute('aria-selected',String(selected));$(id).tabIndex=selected?0:-1}
@@ -104,7 +107,7 @@ function setMode(isImage){
 function removeImage(){image=null;$('imageError').hidden=true;$('photo').value='';$('imageSelected').hidden=true;$('preview').removeAttribute('src');$('assistantImageNote').hidden=true}
 function retrieveCandidates(terms,anchors=[]){
  const tokens=[...new Set(terms.flatMap(t=>{const n=normalize(t).trim();return [n,...n.split(/\s+/).filter(w=>w.length>2)]}).filter(Boolean))];
- return items.filter(i=>!i.m?.[5]&&(!anchors.length||anchors.some(t=>normalize(i.name+' '+i.g.name).includes(normalize(t))))).map(i=>({i,score:tokens.reduce((n,t)=>n+(i.text.includes(t)?(normalize(i.name).includes(t)?10:2):0),0)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i.code.localeCompare(b.i.code)).slice(0,35).map(({i})=>({id:recordId(i),materialCode:i.m?.[0]||null,description:i.name,materialGroup:i.g.code,groupName:i.g.name,taxonomy:i.g.levels,gl:i.g.gl,assetClasses:i.g.assets,budget:classifyBudget(i.g),budgetLabel:budget(i),directPay:isDirectPay(i.g.code)}));
+ return items.filter(i=>i.m&&!i.m[5]&&(!anchors.length||anchors.some(t=>normalize(i.name+' '+i.g.name).includes(normalize(t))))).map(i=>({i,score:tokens.reduce((n,t)=>n+(i.text.includes(t)?(normalize(i.name).includes(t)?10:2):0),0)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i.code.localeCompare(b.i.code)).slice(0,35).map(({i})=>({id:recordId(i),materialCode:i.m?.[0]||null,description:i.name,materialGroup:i.g.code,groupName:i.g.name,taxonomy:i.g.levels,gl:i.g.gl,assetClasses:i.g.assets,budget:classifyBudget(i.g),budgetLabel:budget(i),directPay:isDirectPay(i.g.code)}));
 }
 async function askAI({fromDrawer=false}={}){
  if(fromDrawer){if(imageMode)$('imageQuery').value=$('assistantQuery').value;else $('query').value=$('assistantQuery').value}
@@ -112,15 +115,15 @@ async function askAI({fromDrawer=false}={}){
  if(!db){openAssistant();$('assistantStatus').textContent='กำลังเตรียม master data โปรดรอสักครู่ แล้วกดวิเคราะห์อีกครั้ง';return}
  await suggest(query,imageMode?image:null,retrieveCandidates,id=>{const i=items.find(i=>recordId(i)===id);if(i)detail(i)});
 }
-$('form').onsubmit=e=>{e.preventDefault();if(imageMode){if(!image){notify('เลือกรูปสินค้าก่อนเริ่มค้นหาจากภาพ');$('photo').focus();return}askAI()}else{browseAll=true;search({scroll:true})}};
-for(const id of ['kind','commodity','budget','sort'])$(id).onchange=()=>search();
-for(const b of document.querySelectorAll('[data-q]'))b.onclick=()=>{setMode(false);$('query').value=b.dataset.q;browseAll=true;search({scroll:true})};
-for(const b of document.querySelectorAll('[data-commodity]'))b.onclick=()=>{setMode(false);$('query').value='';$('commodity').value=b.dataset.commodity;browseAll=true;search({scroll:true})};
+$('form').onsubmit=e=>{e.preventDefault();if(imageMode){if(!image){notify('เลือกรูปสินค้าก่อนเริ่มค้นหาจากภาพ');$('photo').focus();return}askAI()}else{if(!$('query').value.trim()){notify('พิมพ์ชื่อ รหัสสินค้า หรือ Material group ก่อนค้นหา');$('query').focus();return}searched=true;browseAll=false;search({scroll:true})}};
+for(const id of ['commodity','budget','sort'])$(id).onchange=()=>search();
+for(const b of document.querySelectorAll('[data-q]'))b.onclick=()=>{setMode(false);$('query').value=b.dataset.q;searched=true;browseAll=false;search({scroll:true})};
+for(const b of document.querySelectorAll('[data-commodity]'))b.onclick=()=>{setMode(false);$('query').value='';$('commodity').value=b.dataset.commodity;searched=false;browseAll=true;search({scroll:true})};
 document.querySelector('.skip-link').onclick=()=>setMode(false);
-$('query').oninput=()=>$('clearQuery').hidden=!$('query').value;
-$('clearQuery').onclick=()=>{$('query').value='';browseAll=false;search();$('query').focus()};
+$('query').oninput=()=>{$('clearQuery').hidden=!$('query').value;if(!$('query').value.trim()){searched=false;browseAll=false;search()}};
+$('clearQuery').onclick=()=>{$('query').value='';searched=false;browseAll=false;search();$('query').focus()};
 $('resetFilters').onclick=resetFilters;$('emptyReset').onclick=resetFilters;
-$('browseAll').onclick=()=>{browseAll=true;search()};
+$('browseAll').onclick=()=>{searched=false;browseAll=true;search()};
 $('more').onclick=()=>{const old=shown;shown+=20;renderResults();$('list').querySelector(`[data-detail="${old}"]`)?.focus({preventScroll:true})};
 $('detail').querySelector('.close').onclick=()=>$('detail').close();$('closeDetail').onclick=()=>$('detail').close();$('copySummary').onclick=()=>{if(selectedRecord)copy(summary(selectedRecord),$('copySummary'))};
 for(const id of ['detail','helpDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id)){const r=$(id).getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$(id).close()}});
@@ -141,11 +144,11 @@ const mobileFilters=matchMedia('(max-width: 800px)');const resizeFilters=()=>$('
 async function loadMaster(){
  $('resultSummary').hidden=true;$('dataError').hidden=true;$('searchButton').disabled=true;$('resultsSection').setAttribute('aria-busy','true');$('stats').textContent='กำลังเตรียมข้อมูลสำหรับค้นหา…';$('status').textContent='กำลังโหลดข้อมูล…';$('welcome').hidden=true;$('emptyState').hidden=true;$('more').hidden=true;$('list').innerHTML='<div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div>';
  try{
-  const response=await fetch('data.json?v=master-3',{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error();
+  const response=await fetch('data.json?v=material-4',{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error();
   db=await response.json();db.groups=db.groups.filter(g=>!excludedGroupCode(g.code));db.materials=db.materials.filter(m=>!excludedGroupCode(m[2]));groups=new Map(db.groups.map(g=>[g.code,g]));
   const fallback=code=>({code,name:'ยังไม่มีข้อมูลกลุ่มสินค้า',levels:[],gl:{},assets:[],keywords:[]});
-  items=[...db.materials.map(m=>({kind:'materials',code:m[0],name:m[1],m,g:groups.get(m[2])||fallback(m[2])})),...db.groups.map(g=>({kind:'groups',code:g.code,name:g.name,g}))];
-  for(const i of items)i.text=normalize([i.code,i.name,i.g.code,isDirectPay(i.g.code)?'direct pay จ่ายตรง':'',...i.g.levels.flat(),...i.g.keywords].join(' '));
+  items=db.materials.map(m=>({kind:'materials',code:m[0],name:m[1],m,g:groups.get(m[2])||fallback(m[2])}));
+  for(const i of items)i.text=normalize([i.code,i.name,i.g.code,i.g.name,isDirectPay(i.g.code)?'direct pay จ่ายตรง':'',...i.g.levels.flat(),...i.g.keywords].join(' '));
   const categories=new Map(items.map(i=>{const c=resultCategory(i);return [c.key,c]}));
   $('commodity').innerHTML='<option value="">ทุกหมวดผลค้นหา</option>';
   for(const [key,category]of [...categories].sort((a,b)=>a[0].localeCompare(b[0]))){const option=document.createElement('option');option.value=key;option.textContent=category.label;$('commodity').append(option)}

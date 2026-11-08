@@ -49,3 +49,9 @@
 ใช้ชื่อและข้อความกลาง ๆ “ค้นหาข้อมูล Material Master” พร้อมโลโก้ BDMS จริงแบบเวกเตอร์. หลีกเลี่ยงการสื่อว่าเป็น Catalog หรือพร้อมคีย์ PR: Catalog เป็นข้อมูลระดับ Plant ซึ่งไม่ได้รวมในเว็บนี้ และไม่ทราบสถานะ availability.
 
 Result category cards เป็น faceted navigation: แยกยอด Material codes/Groups; เปลี่ยนหมวดได้โดยคง counts ของหมวดอื่นตามคำค้น. แยก Direct Pay (Group Z*) ออกจาก Taxonomy L0; ไม่สร้าง L0 ขึ้นแทนข้อมูลที่ไม่มี. Exclude Z00000000 และ M* ตั้งแต่ import และมี frontend guard เพิ่มเติม.
+
+## Material-code-first refinement
+
+เป้าหมายการใช้งานเลือก PR เปลี่ยนให้ผลลัพธ์และ AI เป็น Material code เท่านั้น โดยข้อมูล Group ยังคงเป็น searchable metadata. ลบตัวเลือกแสดง Group cards เพื่อไม่เพิ่มขั้นตอนให้ผู้ใช้ต้องค้นหารหัสสินค้าซ้ำ. หาก Group ไม่มีรหัสสินค้าที่ตรงกับคำค้น/ตัวกรอง ให้แสดงบริบทแทนการเสนอ Group เป็นสินค้า.
+
+ย่อ summary เป็นแถวปุ่มชนิดเดียว ไม่เป็น grid/card ใหญ่และไม่แสดงก่อนค้นคำ; หน้าเริ่มต้นไม่มี category cards. Summary แบ่งตามประเภทหลัก OPEX / CAPEX / both / Direct Pay / unknown และนับรหัสสินค้า ไม่ใช่จำนวน Group. Direct Pay ใช้ Z* ก่อนจัดประเภทบัญชีเพื่อไม่ซ้ำยอด แต่เก็บข้อมูล GL/Asset และ CAPEX/OPEX ตามต้นฉบับไว้ใน detail. มือถือใช้ horizontal scrolling ภายในแถว ไม่ทำให้ทั้งหน้าล้น.
