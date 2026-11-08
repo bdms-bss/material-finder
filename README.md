@@ -42,3 +42,11 @@ GitHub Settings → Pages → Deploy from a branch → main → /docs. URL: http
 `python scripts/import_data.py /path/to/master.xlsx`
 
 commit `docs/data.json` ใหม่แล้ว deploy Pages. ไม่ commit workbook ต้นฉบับและ secrets. ตรวจ `npm run check` และค้นหาตัวอย่างก่อนเผยแพร่.
+
+## UX/UI
+
+การออกแบบและเกณฑ์ประเมิน: [UX design rationale](UX_DESIGN.md). หน้าแรกช่วยเริ่มค้นหา, แยก Material/Group ชัดเจน, แสดง L0 และงบประมาณบน card, คัดลอกข้อมูลรายการได้ และมี AI drawer พร้อม progress/cancel. รองรับ keyboard, responsive layout, error recovery และตรวจด้วย axe-core ในสถานะที่ระบุในเอกสาร.
+
+ตรวจสอบโค้ดและกติกาข้อมูล: `npm run check` และ `npm test` (ไม่ต้องติดตั้ง dependency).
+
+สำหรับ browser/UI/accessibility regression: ติดตั้ง dev dependencies ด้วย `npm install`, ติดตั้ง browser ด้วย `npx playwright install chromium` แล้วรัน `npm run test:ui`. ใช้ `CHROMIUM_PATH` หากมี Chromium ในเครื่องอยู่แล้ว. ผล screenshot อยู่ใน temporary directory `material-finder-ui` หรือกำหนด `UI_ARTIFACT_DIR` เอง. AI ใน automated UI test ใช้ Worker จำลอง; ผลทดสอบโมเดลจริงดู [TESTING.md](TESTING.md).

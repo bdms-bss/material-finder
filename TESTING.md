@@ -27,3 +27,13 @@
 ภาพทดสอบ: [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Man_in_wheelchair_with_AFO_braces_and_crutches_b.jpg). ใช้เฉพาะใน local QA ไม่ได้รวมรูปใน repo หรือส่งไป AI cloud.
 
 ผลทดสอบนี้ไม่ใช่การรับรองความแม่นยำของทุกสินค้า/ภาพ. ต้องตรวจรายละเอียดชนิด รุ่น ขนาด และสเปกก่อนเปิด PR.
+
+## UX/UI redesign regression
+
+ทดสอบโมเดลจริงอีกครั้งกับ UI ใหม่ก่อนเผยแพร่ โดยรัน source ใหม่บน browser context เดิมที่มี cache ของโมเดล:
+
+- ข้อความภาษาไทย → ได้ candidate ถุงมือตรวจโรค และแสดง L0 จาก master
+- ภาพรถเข็น → ได้กลุ่มทั่วไป `C02060000 · WHEELCHAIR` ก่อนกลุ่มเฉพาะทาง พร้อม L0 / CAPEX-OPEX
+- progress, completed state, modal interaction ทำงาน และไม่พบ JavaScript errors หรือ network POST requests
+
+ทดสอบ deterministic UI ด้วย `scripts/check-ui.cjs`: category → L0 filter, query, sort, load more, copy code/summary, group-vs-code warning, no results, AI drawer, cancel/fallback, keyboard tabs/Escape, invalid image, data error/retry, mobile 390/320 px และไม่แสดงผล AI เก่าหลังเปลี่ยนคำค้น. axe-core ไม่พบ violations ในสถานะที่ระบุใน [UX_DESIGN.md](UX_DESIGN.md); ไม่ใช่การรับรอง WCAG conformance ครบทุกข้อ.

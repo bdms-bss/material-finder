@@ -1,1 +1,85 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BDMS • Material Finder</title><link rel="stylesheet" href="style.css?v=local-ai-1"></head><body><header><a class="brand" href="./"><b>BDMS<span> BSS</span></b><small>SUPPLY CHAIN SOLUTION</small></a><span class="tag">PROCUREMENT WORKSPACE</span><button id="settings">✧ AI ฟรีบนเครื่อง</button></header><main><div class="eyebrow">MATERIAL INTELLIGENCE / 01</div><h1>สิ่งที่ต้องการจัดซื้อ<br><span>เริ่มค้นหาได้ที่นี่</span></h1><p class="intro">จากสิ่งที่คุณต้องการ สู่รหัสที่ถูกต้องสำหรับ PR และการวางแผนงบประมาณ</p><section class="searchbox"><div class="tabs"><button class="active" id="textTab">⌕ ค้นหาด้วยข้อความ</button><button id="imageTab">▧ ค้นหาจากรูปภาพ</button></div><form id="form"><label for="query">ชื่อสินค้า รายละเอียดการใช้งาน หรือรหัส Material / Group</label><div class="searchrow"><input maxlength="2000" id="query" placeholder="เช่น เครื่องวัดความดัน, laptop, ถุงมือ หรือ Material code" autocomplete="off"><button class="primary">ค้นหา ↗</button></div><div id="imagePanel" hidden><label class="upload">เพิ่มรูปภาพสินค้า (JPEG / PNG / WebP, สูงสุด 5 MB)<input id="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><img id="preview" hidden alt="ภาพสินค้าที่เลือก"></div></form><div class="examples">ลองค้นหา <button data-q="ถุงมือ">ถุงมือ</button><button data-q="เครื่องวัดความดัน">เครื่องวัดความดัน</button><button data-q="laptop">Laptop</button><button data-q="wheelchair">Wheelchair</button></div></section><div class="stats" id="stats">กำลังโหลดข้อมูล master…</div><section class="workspace"><aside><h3>ปรับผลการค้นหา</h3><label>ประเภทข้อมูล<select id="kind"><option value="all">ทั้งหมด</option><option value="materials">Material code</option><option value="groups">Material group</option></select></label><label>Commodity (L0)<select id="commodity"><option value="">ทุก Commodity</option></select></label><label>งบประมาณ<select id="budget"><option value="">ทุกประเภท</option><option value="capex">CAPEX เท่านั้น</option><option value="opex">OPEX เท่านั้น</option><option value="both">CAPEX / OPEX</option><option value="unknown">ไม่พบข้อมูลจัดประเภท</option></select></label><div class="note">ข้อมูลอ้างอิง 30 ต.ค. 2026<br>ตรวจสอบกับ Procurement และบัญชีก่อนนำไปเปิด PR</div></aside><div class="results"><div class="resultsHead"><div><div class="eyebrow">MASTER DATA</div><h2 id="resultTitle">สำรวจรายการจัดซื้อ</h2></div><button id="aiButton">✧ ถาม AI</button></div><div id="ai" hidden aria-live="polite"></div><p id="status" role="status"></p><div id="list"></div><button id="more" hidden>แสดงเพิ่มเติม</button></div></section></main><footer>BDMS BSS · Material Finder <span>ข้อมูลจาก Master จริง • คำแนะนำ AI ต้องตรวจสอบก่อนใช้งาน</span></footer><dialog id="detail"><button class="close" aria-label="ปิด">×</button><div id="detailBody"></div></dialog><section id="assistantPanel" class="assistantPanel" hidden aria-label="AI Material Assistant"><div class="assistantHead"><div><b>AI Material Assistant</b><div class="eyebrow">FREE · LOCAL AI · NO LOGIN</div></div><button id="closeAssistant" aria-label="ปิด AI">×</button></div><p class="assistantNotice">ค้นหาความหมายภาษาไทย/อังกฤษและวิเคราะห์ภาพบนเครื่องคุณ ไม่ต้อง login หรือเติมเครดิต คำค้นและภาพไม่ส่งไปยังบริการ AI</p><p class="assistantNotice">ครั้งแรกต้องดาวน์โหลดโมเดลภาษา ~118 MB หรือโมเดลภาพ ~154 MB แล้ว browser จะเก็บ cache ใช้ซ้ำ อุปกรณ์ช้าหรือหน่วยความจำจำกัดอาจใช้เวลานาน</p><button id="sendContext" class="primary">วิเคราะห์คำค้น / รูปด้วย AI ฟรี</button><button id="cancelAI" hidden>ยกเลิกการประมวลผล</button><p id="assistantStatus" role="status">พิมพ์สิ่งที่ต้องการหรือแนบภาพ แล้วกดวิเคราะห์</p><div id="assistantOutput" aria-live="polite"></div><p class="assistantNotice">AI ช่วยค้นหารายการใกล้เคียง ไม่ยืนยันรุ่น ขนาด ยา หรือคุณสมบัติจากภาพ รหัส GL, Asset และ Taxonomy อ้างอิง master จริง โปรดตรวจสอบก่อนเปิด PR</p></section><script type="module" src="app.js?v=local-ai-1"></script></body></html>
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b6e69">
+  <meta name="description" content="ค้นหา Material code และ Material group สำหรับ PR และงบประมาณ พร้อม Taxonomy, GL และ Asset class จาก BDMS master data">
+  <title>Material Finder · BDMS BSS</title>
+  <link rel="stylesheet" href="style.css?v=ux-2">
+</head>
+<body>
+  <a class="skip-link" href="#query">ข้ามไปช่องค้นหา</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="./" aria-label="BDMS BSS Material Finder หน้าแรก"><span class="brand-symbol" aria-hidden="true">b<span>+</span></span><span class="brand-wordmark">BDMS <b>BSS</b><small>SUPPLY CHAIN SOLUTION</small></span></a>
+      <span class="header-divider" aria-hidden="true"></span><span class="product-name">Material Finder</span>
+      <nav aria-label="เมนูหลัก"><button id="helpButton" class="button-quiet"><span class="help-icon" aria-hidden="true">?</span> วิธีใช้งาน</button><button id="settings" class="button-ai"><span aria-hidden="true">✧</span> ผู้ช่วย AI <span class="free-label">ฟรี</span></button></nav>
+    </div>
+  </header>
+  <main id="main">
+    <section class="hero" aria-labelledby="pageTitle">
+      <div class="hero-top"><div><div class="eyebrow"><span class="status-dot" aria-hidden="true"></span> YOUR PROCUREMENT COMPANION</div><h1 id="pageTitle">หาของที่ต้องการ<br class="mobile-break"> เจอรหัสที่ใช่<span class="title-dot">.</span></h1><p class="hero-description">ค้นหารหัสสำหรับเปิด PR และวางแผนงบประมาณ<br class="mobile-break"> พร้อมข้อมูลบัญชีในที่เดียว</p></div><div class="hero-guide" aria-hidden="true"><div class="guide-symbol">⌕</div><span>ค้นหา <i>→</i> ตรวจสอบ <i>→</i> นำรหัสไปใช้</span></div></div>
+      <section class="searchbox" aria-label="ค้นหารายการจัดซื้อ">
+        <div class="search-modes" role="tablist" aria-label="วิธีค้นหา">
+          <button id="textTab" role="tab" aria-selected="true" aria-controls="textSearchPanel" tabindex="0"><span aria-hidden="true">⌕</span> พิมพ์คำค้น</button>
+          <button id="imageTab" role="tab" aria-selected="false" aria-controls="imagePanel" tabindex="-1"><span aria-hidden="true">▧</span> ค้นหาจากรูปภาพ <span class="mode-badge">AI</span></button>
+        </div>
+        <form id="form" role="search" aria-label="ค้นหา Material">
+          <div id="textSearchPanel" role="tabpanel" aria-labelledby="textTab">
+            <label for="query" class="sr-only">ชื่อสินค้า คำอธิบาย หรือรหัส Material / Group</label>
+            <div class="search-field"><span class="search-icon" aria-hidden="true">⌕</span><input maxlength="2000" id="query" placeholder="ต้องการซื้ออะไร? เช่น ถุงมือ เครื่องวัดความดัน หรือรหัส Material" autocomplete="off" aria-describedby="searchHint"><button type="button" id="clearQuery" class="icon-button" aria-label="ล้างคำค้น" hidden>×</button><kbd aria-hidden="true">/</kbd></div>
+          </div>
+          <div id="imagePanel" role="tabpanel" aria-labelledby="imageTab" hidden>
+            <label class="upload" for="photo"><span class="upload-symbol" aria-hidden="true">↥</span><span><strong>เลือกรูปสินค้าที่ต้องการหา</strong><small>JPEG, PNG หรือ WebP · สูงสุด 5 MB</small></span><input id="photo" type="file" accept="image/jpeg,image/png,image/webp"></label>
+            <p id="imageError" class="inline-error" role="alert" hidden></p>
+            <div id="imageSelected" class="image-selected" hidden><img id="preview" alt="ภาพสินค้าที่เลือก"><div><strong id="photoName"></strong><button type="button" id="removeImage" class="button-quiet">ลบรูปนี้</button></div></div>
+            <label for="imageQuery" class="input-label">รายละเอียดเพิ่มเติม <span>(ไม่บังคับ)</span></label><input id="imageQuery" maxlength="2000" placeholder="เช่น ใช้ในห้องผ่าตัด ขนาดสำหรับผู้ใหญ่">
+          </div>
+          <div class="search-bottom"><p id="searchHint">ค้นหาได้ทั้งภาษาไทย อังกฤษ และรหัสสินค้า</p><button id="searchButton" class="button-primary" disabled><span id="searchButtonLabel">ค้นหารายการ</span><span aria-hidden="true">→</span></button></div>
+        </form>
+        <div class="examples"><span>ลองค้นหา</span><button data-q="ถุงมือ">ถุงมือ</button><button data-q="เครื่องวัดความดัน">เครื่องวัดความดัน</button><button data-q="laptop">โน้ตบุ๊ก</button><button data-q="wheelchair">รถเข็นผู้ป่วย</button></div>
+      </section>
+      <div class="data-strip"><div id="stats" role="status">กำลังเตรียมข้อมูลสำหรับค้นหา…</div><span class="source-date"><span class="status-dot" aria-hidden="true"></span> ข้อมูลอ้างอิง 30 ต.ค. 2026</span></div>
+    </section>
+    <div id="dataError" class="error-banner" role="alert" hidden><span>โหลดข้อมูลไม่สำเร็จ โปรดตรวจการเชื่อมต่อแล้วลองอีกครั้ง</span><button id="retryData">โหลดข้อมูลใหม่</button></div>
+    <section class="workspace" aria-label="ผลการค้นหาและตัวกรอง">
+      <aside class="filter-sidebar">
+        <details id="filterPanel" open>
+          <summary><span><span aria-hidden="true">☷</span> ตัวกรองการค้นหา</span><span class="filter-chevron" aria-hidden="true">⌄</span></summary>
+          <div class="filter-content">
+            <label for="kind">ประเภทข้อมูล</label><select id="kind"><option value="all">ทั้งหมด</option><option value="materials">Material code</option><option value="groups">Material group</option></select>
+            <label for="commodity">หมวดสินค้า · L0</label><select id="commodity"><option value="">ทุกหมวดสินค้า</option></select>
+            <label for="budget">ประเภทค่าใช้จ่าย</label><select id="budget"><option value="">ทุกประเภท</option><option value="capex">CAPEX เท่านั้น</option><option value="opex">OPEX เท่านั้น</option><option value="both">CAPEX / OPEX</option><option value="unknown">ยังไม่มีข้อมูลจัดประเภท</option></select>
+            <button id="resetFilters" class="reset-button">ล้างตัวกรองทั้งหมด</button>
+            <details class="budget-guide"><summary>CAPEX / OPEX ต่างกันอย่างไร?</summary><p><b>CAPEX</b> มี Asset class<br><b>OPEX</b> มี GL-A หรือ GL-C<br><b>CAPEX / OPEX</b> มีทั้งสอง mapping ให้เลือกตามวัตถุประสงค์ของ PR</p></details>
+          </div>
+        </details>
+        <div class="sidebar-tip"><span class="tip-icon" aria-hidden="true">✧</span><h3>ยังไม่รู้ชื่อที่ใช้ในระบบ?</h3><p>อธิบายสิ่งที่ต้องการด้วยภาษาของคุณ แล้วให้ AI ช่วยหารายการใกล้เคียง</p><button id="sidebarAI" class="text-action">ลองให้ AI ช่วย <span aria-hidden="true">→</span></button><small>ฟรี · ไม่ต้องลงชื่อเข้าใช้</small></div>
+      </aside>
+      <div class="results" id="resultsSection" aria-busy="true">
+        <div class="results-head"><div><div class="eyebrow">MATERIAL CATALOG</div><h2 id="resultTitle">เริ่มจากสิ่งที่คุณต้องการ</h2></div><div class="result-tools"><label for="sort" class="sr-only">เรียงลำดับผลลัพธ์</label><select id="sort" aria-label="เรียงลำดับผลลัพธ์"><option value="relevance">ตรงกับคำค้นมากที่สุด</option><option value="name">ชื่อรายการ A–Z</option><option value="code">รหัสรายการ A–Z</option></select></div></div>
+        <p id="status" role="status" aria-live="polite">กำลังโหลดข้อมูล…</p>
+        <div id="activeFilters" class="active-filters" aria-label="ตัวกรองที่ใช้"></div>
+        <section id="welcome" class="welcome" hidden aria-label="แนะนำวิธีเริ่มค้นหา">
+          <div class="welcome-heading"><span class="welcome-icon" aria-hidden="true">⌕</span><div><h3>ไม่ต้องจำรหัส ก็เริ่มได้</h3><p>พิมพ์ชื่อสิ่งของ หรือเลือกคำแนะนำด้านล่าง</p></div></div>
+          <div class="discovery-grid"><button data-commodity="B"><span class="category-icon mint" aria-hidden="true">✚</span><span><strong>เวชภัณฑ์และวัสดุแพทย์</strong><small>ถุงมือ หน้ากาก อุปกรณ์ใช้สิ้นเปลือง</small></span><span aria-hidden="true">→</span></button><button data-commodity="C"><span class="category-icon blue" aria-hidden="true">⌁</span><span><strong>เครื่องมือแพทย์</strong><small>เครื่องวัด เครื่องติดตามสัญญาณชีพ</small></span><span aria-hidden="true">→</span></button><button data-commodity="D"><span class="category-icon violet" aria-hidden="true">▱</span><span><strong>คอมพิวเตอร์และไอที</strong><small>โน้ตบุ๊ก จอภาพ และอุปกรณ์</small></span><span aria-hidden="true">→</span></button><button data-commodity="E"><span class="category-icon sand" aria-hidden="true">▤</span><span><strong>ของใช้และอุปกรณ์สำนักงาน</strong><small>เก้าอี้ โต๊ะ และวัสดุสำนักงาน</small></span><span aria-hidden="true">→</span></button></div>
+          <button id="browseAll" class="browse-all">หรือดูรายการทั้งหมด <span aria-hidden="true">→</span></button>
+          <div class="workflow-note"><span>01 <b>ค้นหาสิ่งที่ต้องการ</b></span><span aria-hidden="true">→</span><span>02 <b>ตรวจรายละเอียดและบัญชี</b></span><span aria-hidden="true">→</span><span>03 <b>คัดลอกรหัสไปใช้</b></span></div>
+        </section>
+        <div id="list" class="result-list"><div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div></div>
+        <div id="emptyState" class="empty-state" hidden><span class="empty-icon" aria-hidden="true">⌕</span><h3>ยังไม่พบรายการที่ตรงกัน</h3><p>ลองใช้ชื่อทั่วไป ลดรายละเอียดของรุ่น หรือใช้ภาษาอังกฤษ<br>หากไม่แน่ใจ ให้ AI ช่วยค้นหาจากความหมาย</p><div><button id="emptyReset">ล้างตัวกรอง</button><button id="aiButton" class="button-ai">✧ ให้ AI ช่วยค้นหา</button></div></div>
+        <button id="more" class="load-more" hidden>แสดงรายการเพิ่มเติม <span aria-hidden="true">↓</span></button>
+        <p class="results-note">แสดงเฉพาะรายการที่ผ่านเกณฑ์ใช้งาน · ไม่รวม Deletion X, INACTIVE และ (CANCEL)</p>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer"><span><b>BDMS BSS</b> · Material Finder</span><p>ข้อมูลเพื่อช่วยเลือกสินค้าและบัญชี โปรดตรวจสอบกับ Procurement ก่อนเปิด PR</p></footer>
+  <dialog id="detail" class="detail-dialog" aria-labelledby="detailTitle"><div class="dialog-topbar"><span>รายละเอียดสำหรับ PR และงบประมาณ</span><button class="close icon-button" aria-label="ปิดรายละเอียด">×</button></div><div id="detailBody" class="dialog-body"></div><div class="dialog-footer"><span id="detailCopyStatus" class="sr-only" role="status"></span><button id="closeDetail">กลับไปผลค้นหา</button><button id="copySummary" class="button-primary">คัดลอกข้อมูลรายการ</button></div></dialog>
+  <dialog id="assistantPanel" class="assistantPanel" hidden aria-labelledby="assistantTitle"><div class="assistantHead"><div><div class="eyebrow">YOUR SEARCH ASSISTANT</div><h2 id="assistantTitle">ให้ AI ช่วยหารายการ</h2></div><button id="closeAssistant" class="icon-button" aria-label="ปิดผู้ช่วย AI">×</button></div><div class="assistant-body"><div class="ai-trust"><span aria-hidden="true">✧</span><p><b>ใช้ฟรี ไม่ต้องลงชื่อเข้าใช้</b><br>คำค้นและภาพประมวลผลบนเครื่องของคุณ</p></div><label for="assistantQuery">อธิบายสิ่งที่คุณต้องการ</label><textarea id="assistantQuery" rows="3" maxlength="2000" placeholder="เช่น อยากได้ถุงมือใส่ตรวจคนไข้"></textarea><p id="assistantImageNote" class="field-hint" hidden>ใช้ภาพสินค้าที่แนบในหน้าค้นหาประกอบด้วย</p><details class="ai-download-info"><summary>ครั้งแรกดาวน์โหลดโมเดลประมาณ 118–154 MB</summary><p>ใช้อินเทอร์เน็ตดาวน์โหลดโมเดลภาษา ~118 MB หรือโมเดลภาพ ~154 MB พร้อม runtime จากนั้น browser จะเก็บ cache ตามที่อุปกรณ์อนุญาต เครื่องที่หน่วยความจำน้อยอาจใช้เวลานาน</p></details><button id="sendContext" class="button-primary full-width">✧ วิเคราะห์และแนะนำรายการ</button><div class="ai-status-box"><progress id="aiProgress" max="100" hidden aria-label="ความคืบหน้าการประมวลผล AI"></progress><p id="assistantStatus" role="status" aria-live="polite">พร้อมช่วยค้นหา พิมพ์สิ่งที่ต้องการแล้วกดวิเคราะห์</p><button id="cancelAI" class="text-action" hidden>หยุดการประมวลผล</button></div><div id="assistantOutput" aria-live="polite"></div><p class="assistantNotice">AI แนะนำรายการใกล้เคียง ไม่ยืนยันรุ่น ขนาด หรือชนิดยา โปรดตรวจรายละเอียดก่อนนำรหัสไปใช้</p></div></dialog>
+  <dialog id="helpDialog" class="help-dialog" aria-labelledby="helpTitle"><div class="dialog-topbar"><h2 id="helpTitle">เริ่มใช้งาน Material Finder</h2><button id="closeHelp" class="icon-button" aria-label="ปิดวิธีใช้งาน">×</button></div><div class="dialog-body"><ol class="help-steps"><li><h3>ค้นหาด้วยสิ่งที่คุณรู้</h3><p>ใช้ชื่อสินค้า ภาษาไทยหรืออังกฤษ รหัส Material หรือ Material group ก็ได้ หากมีเพียงภาพ ให้เลือก “ค้นหาจากรูปภาพ”</p></li><li><h3>เลือกและตรวจข้อมูล</h3><p>ดูหมวด L0 และประเภทค่าใช้จ่าย แล้วเปิดรายละเอียดเพื่อตรวจ Group, GL ตาม Department และ Asset class</p></li><li><h3>คัดลอกไปใช้ในงาน</h3><p>Material code ใช้ระบุสินค้าเฉพาะรายการ ส่วน Material group เป็นกลุ่มสินค้า อย่านำ Group ไปใช้แทน Material code โดยยังไม่ได้ตรวจสอบ</p></li></ol><div class="info-box"><h3>ข้อมูลที่ใช้ค้นหา</h3><p>อ้างอิง Excel snapshot 30 ต.ค. 2026 โดยวันที่ปรับปรุงแต่ละ sheet อาจต่างกัน ตัด Deletion X, INACTIVE และ (CANCEL) ก่อนเว็บโหลดข้อมูล</p><p>CAPEX = มี Asset class · OPEX = มี GL-A/GL-C · มีทั้งสอง mapping = CAPEX/OPEX</p></div></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="app.js?v=ux-2"></script>
+</body>
+</html>
