@@ -1,50 +1,30 @@
-# AI ของผู้ใช้ผ่าน OpenRouter OAuth
+# AI ฟรีบน browser
 
-## ทำไมเลือกวิธีนี้
-
-OpenRouter เปิด flow OAuth PKCE สำหรับ frontend: ผู้ใช้ login/authorize ที่ `openrouter.ai/auth` แล้วเว็บแลก code เป็น key ที่ผูกกับบัญชีผู้ใช้. ไม่ต้องสร้างแอปใน Microsoft tenant หรือให้ผู้ดูแล Entra อนุมัติ integration. หากอุปกรณ์/เครือข่ายองค์กรบล็อก OpenRouter เว็บนี้ไม่ข้ามข้อจำกัดเหล่านั้น.
-
-ผู้ใช้ต้องมี **บัญชี OpenRouter**; การ login นี้ไม่ได้ดึง token จากบัญชี ChatGPT/Claude/Gemini/Copilot หรือใช้แพ็กเกจสมาชิกเดิม. ใช้เครดิต OpenRouter ตามราคา/วงเงินของบัญชี ไม่รับประกันใช้ฟรีไม่จำกัด. ผู้ใช้สามารถกำหนดวงเงินบนหน้า authorize/key settings ของ OpenRouter.
+AI รุ่นนี้ไม่ใช้ login, token, API key, เครดิต OpenRouter หรือ Copilot Studio. ประมวลผลด้วย Transformers.js / ONNX Runtime Web ภายใน Web Worker ของ browser ผ่าน CPU/WASM จึงไม่ต้องมี WebGPU และไม่ทำให้หน้าค้นหาค้างระหว่างคำนวณ.
 
 ## วิธีใช้
 
-1. เปิดหน้าเว็บ กด “เชื่อมบัญชี AI” → “Login ด้วย OpenRouter”.
-2. Login และตรวจสิทธิ์/วงเงินบน OpenRouter จากนั้น authorize เพื่อกลับเว็บ.
-3. เลือกโมเดล และยืนยันการส่งข้อมูลออกไปยังบริการภายนอก.
-4. พิมพ์คำค้นหรือเพิ่มภาพ แล้วกด “ถาม AI”. ถ้าหน้าถูก redirect ระหว่าง login ให้แนบภาพอีกครั้ง (ไม่เก็บภาพใน sessionStorage).
-5. AI วิเคราะห์คำค้นก่อน เว็บค้นจาก master จริงและส่ง top 35 candidates ให้ AI เลือก. คลิกการ์ดที่ตรวจรหัสแล้วเพื่อดู GL/Asset/Taxonomy จาก master.
-6. ตัดการเชื่อมต่อเมื่อเลิกใช้. หากต้องการเพิกถอนสิทธิ์ key ที่ OpenRouter ด้วย ให้ใช้ “จัดการ key / วงเงิน” แล้วลบ key ที่เกี่ยวข้อง.
+1. พิมพ์สิ่งที่ต้องการ หรือแนบภาพ JPEG/PNG/WebP ไม่เกิน 5 MB.
+2. กด “ถาม AI” หรือ “AI ฟรีบนเครื่อง” → “วิเคราะห์คำค้น / รูปด้วย AI ฟรี”.
+3. ครั้งแรก browser ดาวน์โหลดโมเดลภาษา ~118 MB สำหรับข้อความ หรือโมเดลภาพ ~154 MB สำหรับภาพ พร้อม tokenizer/runtime; มีแถบข้อความความคืบหน้าและปุ่มยกเลิก. ไฟล์จะ cache ตามที่ browser อนุญาต.
+4. AI เลือกแนวคิดสินค้าใกล้เคียงจากชุดคำศัพท์จัดซื้อไทย/อังกฤษ แล้วเว็บค้น candidate ใน master ที่ผ่านกฎ exclusion. AI เทียบ candidate อีกครั้งและแสดงได้สูงสุด 6 รายการ.
+5. คลิกการ์ดเพื่อดูรหัส, L0-L4, GL, Asset class และ CAPEX/OPEX จาก master จริง.
 
-## การจัดการ credential
+## ขอบเขต
 
-- สร้าง verifier และ state ด้วย Web Crypto, ใช้ challenge S256.
-- ตรวจ callback state และอายุ 10 นาที ก่อนแลก code; ลบ code/state/error จาก address bar ทันที.
-- callback ไปที่ origin+path ปัจจุบัน ไม่กำหนด secret และไม่ต้องใช้ backend.
-- key เก็บใน sessionStorage ของแท็บ; ไม่ log, ไม่ส่งเป็น query string และส่ง Authorization header เฉพาะ OpenRouter API.
-- no-referrer ป้องกันส่ง callback URL ไปเป็น referrer ของทรัพยากรภายนอก.
-- ตัดการเชื่อมต่อจะยกเลิกคำขอที่ค้าง ลบ key และล้างคำตอบใน panel. การ abort ไม่รับประกันว่าคำขอที่ provider รับไปแล้วจะไม่ถูกคิดเงิน.
-- สิทธิ์ key เป็นของผู้ใช้ ไม่แชร์ key ของผู้พัฒนา. ปิดแท็บเพื่อลบ session storage ตาม browser session semantics; browser restore/duplicate tab อาจคง session ไว้ได้ ให้กดตัดการเชื่อมต่อถ้าใช้เครื่องร่วมกัน.
+- นี่คือ semantic retrieval และ image similarity ไม่ใช่ generative chat. ข้อความตอบประกอบสร้างจากข้อมูล master และ template ที่ควบคุมได้.
+- โมเดลไม่ได้รู้รหัส SAP; รหัสและ accounting mapping มาจาก master เท่านั้น.
+- รูปสินค้าอาจบอกชนิดได้ แต่ไม่สามารถยืนยันรุ่น ขนาด สเปก หรือชนิดยา/ปริมาณยาได้. ผลอันดับแรกเป็นเพียงรายการใกล้เคียง.
+- มีชุดแนวคิดจัดซื้อที่กำหนดไว้ใน `docs/ai-topics.js`; รายการนอกขอบเขตอาจแนะนำไม่ได้. ขยายคำศัพท์ได้ตามผล UAT.
+- ไม่ส่งคำค้น รูป หรือ candidate ไป AI server. มีการเชื่อม CDN/Hugging Face เพื่อดาวน์โหลด runtime และโมเดล จึงต้องใช้อินเทอร์เน็ตครั้งแรก.
+- ไม่คิดค่า inference/API และไม่เปิดหน้าเติมเครดิต. ยังมีค่าอินเทอร์เน็ตและใช้ CPU/RAM ของอุปกรณ์ตามปกติ.
+- เครื่องช้า มือถือ RAM น้อย หรือเครือข่ายที่บล็อก CDN/Hugging Face อาจใช้ไม่ได้. กรณีโหลดโมเดลไม่สำเร็จ แสดงข้อความผิดพลาดและผลจับคู่ข้อความแยกชัดเจนว่าไม่ใช่ผล AI.
+- การค้นหาธรรมดาไม่ต้องโหลดโมเดลและยังทำงานได้ตามปกติ. ตัวกรองของหน้าค้นหาปกติไม่จำกัด candidate ของ AI.
 
-## ข้อมูลที่ส่ง
+## Models / runtime
 
-รอบ 1: คำค้นและภาพ (ถ้ามี) เพื่อหา generic search terms.
-รอบ 2: คำค้น, คำที่ AI สรุป, และ top 35 candidates พร้อม Material code, Group, Taxonomy, GL, Asset, Budget; ไม่ส่ง master ทั้งหมด. เว็บค้น candidate ใน browser จาก catalog ทั้งหมด โดยไม่รวม Material ที่ deletion flag. การส่งออกนี้แยกจากระบบ AI ขององค์กรเดิม ผู้ใช้เห็นข้อความยืนยันก่อนส่ง.
+- [Transformers.js 3.0.2](https://github.com/huggingface/transformers.js/tree/3.0.2)
+- [Multilingual MiniLM](https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2): feature extraction / cosine similarity สำหรับข้อความไทยและอังกฤษ (quantized)
+- [CLIP ViT-B/32](https://huggingface.co/Xenova/clip-vit-base-patch32): zero-shot image classification และ image/text similarity (quantized)
 
-คำขอกำหนด `provider.data_collection: deny` ตาม API routing ของ OpenRouter และไม่มี fallback ไป provider ที่ไม่ตรงเงื่อนไขอย่างเงียบ ๆ; นี่ไม่ใช่การยืนยันว่าองค์กรอนุมัติบริการหรือว่าข้อมูลไม่ถูกประมวลผลภายนอก. ตรวจ [OpenRouter privacy](https://openrouter.ai/privacy) และเงื่อนไขของโมเดลที่เลือก.
-
-## ทดสอบกับบัญชีจริงก่อนใช้งาน
-
-- login ด้วย OpenRouter, ตรวจวงเงินที่อนุญาต, กลับเว็บสำเร็จ
-- ยกเลิก login / ปลอม state / callback หมดอายุไม่เชื่อมบัญชี
-- ทดลองคำค้นถุงมือ, เครื่องวัดความดัน และภาพสินค้า โดยตรวจ GL/Asset/Taxonomy กับ master
-- ชื่อที่ไม่พบไม่สร้างรหัสใหม่; คำตอบที่เสนอ id นอก candidate ไม่ถูกแสดงเป็นการ์ด
-- หมดเครดิต/โมเดลไม่พร้อม/timeout แสดง error โดยไม่ fallback หรือเรียกซ้ำอัตโนมัติ
-- ตัดการเชื่อมต่อแล้วไม่สามารถส่ง AI request ต่อ และลบ key บน OpenRouter ได้
-
-## เอกสารทางการ
-
-- [OAuth PKCE](https://openrouter.ai/docs/guides/overview/auth/oauth)
-- [Models API](https://openrouter.ai/api/v1/models)
-- [Provider routing](https://openrouter.ai/docs/guides/routing/provider-selection)
-
-ทดสอบ OAuth/API ด้วย mocks และทดสอบหน้าเว็บใน Chromium; การ authorize และ inference จริงต้องใช้บัญชีผู้ใช้ ไม่มีการแอบใช้ credential ของระบบพัฒนา.
+โมเดลโหลดจากเจ้าของเดิม ไม่รวม weights ใน repository นี้. ดู license/model card ที่ลิงก์ต้นทาง. อุปกรณ์ผู้ใช้จะดาวน์โหลดจากแหล่งเดิมเมื่อกดใช้ AI.
