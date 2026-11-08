@@ -1,0 +1,1 @@
+{"name":"bdms-material-finder","private":true,"type":"module","scripts":{"start":"node api/server.mjs","check":"node --check docs/app.js && node --check api/server.mjs"},"engines":{"node":">=22"}}
