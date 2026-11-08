@@ -27,6 +27,7 @@ GitHub Settings → Pages → Deploy from a branch → main → /docs. URL: http
 - Taxonomy ใช้ `Master_DataTaxonomy`; ไม่ apply แผ่น `New_Edit` ซึ่งเป็นรายการขอแก้ไข
 - ตัด Material ที่ `Deletion at Client Level = X` ออกจากข้อมูลที่เผยแพร่
 - ตัด Material groups ที่ description ขึ้นต้น `INACTIVE` และ Materials ที่ผูกกับกลุ่มเหล่านี้หรือมี Material Group Description ขึ้นต้น `INACTIVE` (trim และไม่แยกตัวพิมพ์เล็กใหญ่)
+- ตัดชื่อ Material Description หรือ Material Group Description ที่ขึ้นต้น `(CANCEL)` และ Material ที่ผูกกับกลุ่มดังกล่าวตั้งแต่ก่อนสร้างไฟล์ข้อมูลเว็บ (trim และไม่แยกตัวพิมพ์เล็กใหญ่)
 - ใช้ข้อมูลหลังตัดรายการเดียวกันกับผลค้นหา สถิติ และ AI; ไม่มีตัวเลือกเปิดแสดงรายการที่ตัดออก
 - กติกา BDMS BSS: มี Asset class → CAPEX; มี GL-A (Admin expense) หรือ GL-C (Cost) → OPEX; มีทั้งสองประเภท mapping → CAPEX/OPEX
 - ไม่มีทั้งสอง mapping → ไม่พบข้อมูลจัดประเภท; GL-S เพียงอย่างเดียวไม่ใช้สรุป OPEX
