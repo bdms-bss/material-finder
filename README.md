@@ -8,18 +8,17 @@ GitHub Settings → Pages → Deploy from a branch → main → /docs. URL: http
 
 สำหรับ local: `python -m http.server 8000 --directory docs`
 
-## AI และรูปภาพ
+## Microsoft Copilot ขององค์กร
 
-GitHub Pages ให้บริการ static frontend เท่านั้น ต้อง deploy `api/server.mjs` บน Node 22+ service ที่รองรับ HTTPS แล้วตั้ง environment variables ในระบบ hosting:
+ฝังแชต Copilot Studio ผ่าน Microsoft Web Chat และลงชื่อเข้าใช้บัญชีองค์กรด้วย Microsoft Entra ID. ไม่มีการใช้ OpenAI API key อีกต่อไป.
 
-- `OPENAI_API_KEY` (server secret เท่านั้น)
-- `ALLOWED_ORIGIN=https://bdms-bss.github.io`
-- `OPENAI_MODEL=gpt-4.1-mini` (optional)
-- `PORT=8787` (optional)
+**สถานะ:** เตรียม integration แล้ว แต่ยังไม่เชื่อม tenant/agent จริง ต้องให้ผู้ดูแลตั้งค่าใน `docs/copilot-config.json` ตาม [คู่มือติดตั้ง](COPILOT_SETUP.md). เมื่อไม่มี configuration ปุ่ม login จะปิดและแสดงสถานะอย่างชัดเจน.
 
-รัน `npm start` จาก project root แล้วกด AI connection ในเว็บ ใส่ `https://your-service/api/suggest`. รูปภาพจะส่งไป backend และ OpenAI เมื่อผู้ใช้กดค้นหา/AI เท่านั้น ไม่บันทึกภาพใน repository. AI ระบุสินค้าและสร้าง search terms ก่อน retrieve กลุ่มจาก master แล้วเสนอเฉพาะรหัสที่มีอยู่จริง; กดกลุ่มเพื่อดู mapping และค้นหา Material code ที่เกี่ยวข้อง ห้ามใช้ API key ใน browser.
+ผู้ใช้กด “Copilot องค์กร” → “ลงชื่อเข้าใช้ด้วย Microsoft” → ค้นหาสินค้า → “ถาม Copilot”. เว็บส่งคำค้น, รูปที่เลือก (ถ้ามี), และ candidate 25 รายการแรกตามตัวกรองปัจจุบัน พร้อม GL, Asset และ Taxonomy ไปยัง agent. แชตไม่เห็น master ทั้งหมดโดยอัตโนมัติ. หากไม่พบ candidate ให้ agent ขอข้อมูลเพิ่มและเสนอคำค้นใหม่; ต้องเพิ่ม knowledge/tool ฝั่งองค์กรหากต้องการให้ agent ค้น master ทั้งหมดเอง.
 
-ก่อนเปิด AI endpoint สู่สาธารณะให้ติดตั้ง authentication, rate limiting และ spending limit ที่ API gateway; CORS ไม่ใช่ระบบ authentication. Backend ใน repo เป็น integration starter ยังไม่ได้ deploy และยังไม่ได้ทดสอบเรียก AI จริงเนื่องจากไม่มี key.
+ภาพแนบผ่าน message attachment; การวิเคราะห์ภาพขึ้นกับความสามารถและการตั้งค่า agent/channel ขององค์กร ต้องทดสอบกับ agent จริงก่อนประกาศว่าใช้งานได้. ยังไม่ได้ทดสอบ login, token exchange หรือคำตอบ AI จริง เนื่องจากยังไม่มี tenant/agent configuration.
+
+การ login ควบคุมการเข้าถึง agent เท่านั้น หน้า GitHub Pages และ catalog ยังคงเป็น public. ต้องตั้ง agent ให้ require sign-in และกำหนดสิทธิ์ฝั่ง Copilot Studio/Entra; การปิดปุ่มในเว็บไม่ใช่การป้องกัน agent. ไม่ใส่ client secret, Direct Line secret หรือ access token ใน repo. MSAL จัดการ user session ใน sessionStorage ของ browser.
 
 ## ข้อมูลและหลักเกณฑ์
 

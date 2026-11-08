@@ -1,0 +1,7 @@
+{
+  "tenantId": "",
+  "clientId": "",
+  "tokenEndpoint": "",
+  "tokenExchangeScope": "",
+  "redirectUri": "https://bdms-bss.github.io/material-finder/"
+}
