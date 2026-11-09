@@ -4,25 +4,25 @@ export function validateCloudConfig(config){
 }
 export function verifiedCloudSuggestions(candidates,suggestions){
  const allowed=new Map(candidates.filter(c=>c.materialCode&&c.id==='materials:'+c.materialCode).map(c=>[c.id,c]));const seen=new Set();
- return (Array.isArray(suggestions)?suggestions:[]).filter(s=>allowed.has(s?.id)&&!seen.has(s.id)&&seen.add(s.id)).slice(0,6).map(s=>({record:allowed.get(s.id),reason:typeof s.reason==='string'?s.reason.slice(0,900):''}));
+ return (Array.isArray(suggestions)?suggestions:[]).filter(s=>allowed.has(s?.id)&&!seen.has(s.id)&&seen.add(s.id)).slice(0,3).map(s=>({record:allowed.get(s.id),reason:typeof s.reason==='string'?s.reason.slice(0,900):''}));
 }
 export async function cloudCall(config,path,body,signal,fetcher=fetch){
- if(!validateCloudConfig(config)||!['/api/intent','/api/rank'].includes(path))throw Error('ยังไม่ได้ตั้งค่า Gemini backend ของระบบ');
+ if(!validateCloudConfig(config)||!['/api/intent','/api/rank'].includes(path))throw Error('ยังไม่ได้ตั้งค่า AI backend ของระบบ');
  const response=await fetcher(new URL(path,config.backendUrl),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal,credentials:'omit'});
  let data;try{data=await response.json()}catch{throw Error('backend ไม่ส่งคำตอบ JSON กรุณาตรวจ URL และการ deploy')}
- if(!response.ok)throw Error(data.message||'เรียก Gemini backend ไม่สำเร็จ');return data;
+ if(!response.ok)throw Error(data.message||'เรียก AI backend ไม่สำเร็จ');return data;
 }
 export async function cloudSearch({config,query,image,getToken,retrieve,signal,progress,fetcher=fetch}){
  const token=await getToken('material-intent',signal);
- progress('1/2 · Gemini กำลังทำความเข้าใจคำอธิบายและภาพ…');
+ progress('1/2 · AI กำลังทำความเข้าใจคำอธิบายและภาพ…');
  const intent=await cloudCall(config,'/api/intent',{query,image,turnstileToken:token},signal,fetcher);
  const terms=(Array.isArray(intent.searchTerms)?intent.searchTerms:[]).filter(t=>typeof t==='string').slice(0,10);
  const candidates=retrieve([query,...terms]);
  if(!candidates.length)return {intent,records:[],question:intent.clarificationQuestion||'ไม่พบรหัสใน Master ลองเพิ่มประเภทสินค้า ชื่อทั่วไป หรือวัตถุประสงค์การใช้'};
  const rankToken=await getToken('material-rank',signal);
- progress('2/2 · Gemini กำลังตรวจเทียบ Material codes จาก Master…');
+ progress('2/2 · AI กำลังตรวจเทียบ Material codes จาก Master…');
  const result=await cloudCall(config,'/api/rank',{query,intent:{item:intent.item,requiredFeatures:intent.requiredFeatures},candidates,turnstileToken:rankToken},signal,fetcher);
- return {intent,records:verifiedCloudSuggestions(candidates,result.suggestions),question:result.clarificationQuestion||''};
+ const records=verifiedCloudSuggestions(candidates,result.suggestions);return {intent,records,question:result.clarificationQuestion||(records.length?'':'ยังไม่พบรายการที่เหมาะสมจาก Master ลองระบุประเภทหรือการใช้งานเพิ่มเติม')};
 }
 export async function prepareCloudImage(dataUrl){
  if(!dataUrl)return null;

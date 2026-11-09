@@ -1,6 +1,6 @@
 # BDMS Material Master
 
-เว็บอ้างอิง Material code / Material group จาก Material Master สำหรับเตรียมการจัดซื้อและวางแผนงบประมาณ พร้อม Taxonomy L0–L4, GL แยก Department type และ Asset class จาก master จริง รองรับภาษาไทยด้วยคำพ้องที่กำหนดไว้และ Gemini Cloud ผ่าน backend
+เว็บอ้างอิง Material code / Material group จาก Material Master สำหรับเตรียมการจัดซื้อและวางแผนงบประมาณ พร้อม Taxonomy L0–L4, GL แยก Department type และ Asset class จาก master จริง รองรับภาษาไทยด้วยคำพ้องที่กำหนดไว้และ Gemma 4 บน Cloudflare Workers AI
 
 ## เปิดเว็บ
 
@@ -8,19 +8,21 @@ GitHub Settings → Pages → Deploy from a branch → main → /docs. URL: http
 
 สำหรับ local: `python -m http.server 8000 --directory docs`
 
-## Gemini Cloud ผ่าน Cloudflare Worker
+## AI สำหรับข้อความและภาพ
 
-เปลี่ยนเป็น Gemini API ผ่าน backend เพื่อใช้โมเดล cloud ตีความข้อความ/ภาพ และตรวจเลือกจาก Material Master จริง. ไม่ดาวน์โหลดโมเดลใน browser และไม่ใช้บัญชี Puter/OpenRouter. Gemini key เก็บใน Cloudflare Worker secret เท่านั้น.
+ใช้ **Gemma 4 26B A4B บน Cloudflare Workers AI** ผ่าน Worker เดิม. ไม่ดาวน์โหลดโมเดลลงเครื่อง ไม่ใช้ Gemini key ส่วนตัว และไม่ต้องตั้ง Copilot Studio หรือ Microsoft Entra เพื่อค้นหา.
 
-**สถานะ:** Deploy Cloudflare Worker และ Turnstile แล้ว และเชื่อม public config ในเว็บแล้ว ผู้ดูแลใส่ Gemini key แล้ว (Free tier, ไม่เปิด Billing) และเก็บ key เป็น Worker Secret. Health ตั้งค่าครบแล้ว แต่การทดสอบคำตอบจริงยังค้างที่ Turnstile ใน browser อัตโนมัติ จึงยังไม่ยืนยันคุณภาพ Gemini. ดู [ขั้นตอน Deploy และเชื่อมต่อ](backend/README.md). Frontend config เก็บเฉพาะ Worker URL และ public Turnstile Site Key ใน `docs/ai-config.json`.
+ขั้นตอน: ตีความคำค้น/ภาพ → ค้น Material Master ใน browser (สูงสุด 40 candidates กระจายตาม Group) → AI เลือกตัวอ้างอิงสั้น r1/r2 → server แปลงกลับเป็น Material Code จริง → browser ตรวจ whitelist ซ้ำ. คืนไม่เกิน 3 รายการ พร้อมคัดลอกรหัส/ดูรายละเอียด. ข้อมูลบัญชีและประเภทใช้ Master โดยตรง.
 
-ผู้ใช้ยืนยันส่งคำค้น/ภาพ/รายการ candidate ไป Cloudflare และ Google ก่อนเรียก. หนึ่งคำถามใช้ได้สูงสุด 2 Gemini calls; โควตาและค่าใช้จ่ายตาม Google project ไม่ใช่ฟรีไม่จำกัด. AI เลือกได้เฉพาะ Material codes ใน candidate; เมื่อสเปกไม่ชัดสามารถถามเพิ่มแทนเดารหัส. GL/Asset/Taxonomy และการจัดประเภทใช้ข้อมูล Master เดิม.
+ผู้ใช้ยืนยันส่งคำค้น ภาพ และรายการอ้างอิงไป Cloudflare ก่อนวิเคราะห์. มี Turnstile, การตรวจ hostname/action, CORS และ rate limit. เรียกโมเดลสูงสุดสองครั้งต่อการค้นหา ไม่มีการสลับไปโมเดลเสียเงินอัตโนมัติ. Workers AI มีโควตาฟรีรายวัน; ไม่ใช่ใช้ฟรีไม่จำกัด และต้องคงบัญชี Workers Free หากต้องการให้เกินโควตาแล้วหยุดแทนคิดเงิน. ไม่เปิดแพ็กเกจ Paid ในงานนี้.
 
-อ่าน [ภาพรวม AI](AI_LOGIN.md) และ [ข้อจำกัดการทดสอบ](TESTING.md). คำตอบจริง/ความแม่นยำต้องทดสอบอีกครั้งหลัง backend พร้อม credentials.
+ทดสอบ inference จริงผ่าน Cloudflare API แล้วทั้งภาพ pulse oximeter, ภาพ wheelchair, คำค้นถุงมือที่ขาดสเปก และถุงมือไนไตรล์ขนาด M. รายละเอียดและขอบเขตอยู่ใน [TESTING.md](TESTING.md). ผลตัวอย่างไม่ใช่การรับประกันความถูกต้องของทุกสินค้า.
+
+Backend URL เดิมคงชื่อ `bdms-material-gemini` เพื่อไม่เปลี่ยนที่อยู่ แต่โค้ดปัจจุบันใช้ Workers AI เท่านั้น. Gemini secret เดิมถ้ายังมีอยู่ไม่ได้ใช้งาน. ดู [คู่มือ backend](backend/README.md) และ [ภาพรวม AI](AI_LOGIN.md).
 
 ## ข้อมูลและหลักเกณฑ์
 
-ข้อมูลนำเข้าจาก `H BDMS DCT-PRD-DataTaxonomy(20261030).xlsx`. เผยแพร่เฉพาะฟิลด์ catalog ที่จำเป็น ไม่รวม Created By, Changed By, ชื่อผู้รับผิดชอบ และข้อมูลราคา. การเป็น public repo ทำให้ catalog ที่นำเข้าเป็นข้อมูลสาธารณะตามคำขอ.
+ข้อมูลนำเข้าจาก `H BDMS DCT-PRD-DataTaxonomy(20261030).xlsx`. เผยแพร่เฉพาะฟิลด์ Material Master ที่จำเป็น ไม่รวม Created By, Changed By, ชื่อผู้รับผิดชอบ และข้อมูลราคา. การเป็น public repo ทำให้ Material Master ที่นำเข้าเป็นข้อมูลสาธารณะตามคำขอ.
 
 - Join ด้วย Material Group; GL ใช้ `sap_MaterialGroup_GL` และเก็บทุก Department type แยกกัน
 - Asset mapping ใช้ `sap_MaterialGroup_Asset`; GL/Asset descriptions จาก master โดยตรง

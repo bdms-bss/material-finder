@@ -7,14 +7,22 @@
   "vars": {
     "ALLOWED_ORIGIN": "https://bdms-bss.github.io",
     "TURNSTILE_HOSTNAME": "bdms-bss.github.io",
-    "GEMINI_MODEL": "gemini-2.5-flash"
+    "AI_MODEL": "@cf/google/gemma-4-26b-a4b-it"
   },
   "ratelimits": [
     {
       "name": "AI_RATE_LIMITER",
       "namespace_id": "730119",
-      "simple": {"limit": 20, "period": 60}
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
     }
   ],
-  "observability": {"enabled": false}
+  "observability": {
+    "enabled": false
+  },
+  "ai": {
+    "binding": "AI"
+  }
 }

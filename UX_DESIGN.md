@@ -21,10 +21,10 @@
 | Efficiency | ตัวกรองที่ล้างได้ทีละตัว, reset, sort, copy code / copy summary, load more และการกลับ focus หลัง modal |
 | Cognitive load | ใช้ progressive disclosure กับ account mapping, taxonomy, CAPEX/OPEX explanation และรายละเอียด download ของ AI |
 | Trust / provenance | Snapshot/source, mapping ที่ไม่มีข้อมูลระบุอย่างตรงไปตรงมา, exclude X/INACTIVE/CANCEL ก่อนโหลด, คำแนะนำ AI ไม่ใช่การยืนยัน spec |
-| Gemini Cloud | Drawer มีช่องอธิบาย, สถานะการตั้งค่า backend, consent ส่งข้อมูล, Turnstile, progress/cancel, quota error และคำถามขอรายละเอียดเพิ่ม ไม่ fallback ไป local model |
+| Gemma 4 Cloud | Drawer มีช่องอธิบาย, สถานะการตั้งค่า backend, consent ส่งข้อมูล, Turnstile, progress/cancel, quota error และคำถามขอรายละเอียดเพิ่ม ไม่ fallback ไป local model |
 | Accessibility | Native buttons/select/dialog, labelled controls, tab keyboard behavior, focus-visible, skip link, reduced motion, status/alert announcements, copy feedback ภายใน dialog |
 | Responsive design | Mobile ยุบตัวกรอง, cards เป็น single column, touch controls ใหญ่ขึ้น, AI drawer เต็มจอ และ modal scroll แยกจากพื้นหลัง |
-| Performance | ไม่ sort catalog ทั้งหมดก่อนผู้ใช้เริ่มค้นหา, แสดง 20 รายการต่อครั้ง, เรียก Gemini เฉพาะเมื่อผู้ใช้ยืนยันและกดวิเคราะห์, ไม่โหลดโมเดลใน browser |
+| Performance | ไม่ sort Material Master ทั้งหมดก่อนผู้ใช้เริ่มค้นหา, แสดง 20 รายการต่อครั้ง, เรียก AI เฉพาะเมื่อผู้ใช้ยืนยันและกดวิเคราะห์, ไม่โหลดโมเดลใน browser |
 | Recovery | Loading skeleton, disabled submit ระหว่างโหลด, data retry, clear query, no-result suggestions, persistent image validation error, clipboard fallback |
 | Maintainability | Design tokens, reusable card/dialog states, versioned entry modules, ไม่เปลี่ยนกติกา accounting หรือ source exclusions |
 
@@ -37,7 +37,7 @@
 - Desktop 1440 px / mobile 390 px: guided discovery, filters, search, zero-result recovery, sorting, copy, finance detail, group-vs-material distinction, help, keyboard tabs and Escape, AI drawer and cancellation.
 - Clipboard code/summary ได้ค่าจริง และ summary มี L0 / GL / Asset / budget.
 - axe-core 4.10.3: checked WCAG 2 A/AA, 2.1 AA, 2.2 AA tags on home, detail, AI and mobile results; no violations in those tested states at initial QA.
-- UI tests ใช้ simulated Worker สำหรับ deterministic state coverage; model correctness มีการทดสอบ inference จริงแยกต่างหากในรอบ local AI ก่อนหน้า และตรวจ regression หลัง redesign.
+- UI tests ใช้ simulated Worker สำหรับ deterministic state coverage; model correctness มีการทดสอบ inference จริงบน Workers AI แยกต่างหาก และตรวจ regression หลัง redesign.
 - `npm test`: accounting rules, excluded catalog และ candidate/vocabulary integrity.
 
 ## Recommended user UAT
@@ -56,6 +56,10 @@ Result category cards เป็น faceted navigation: แยกยอด Materi
 
 ย่อ summary เป็นแถวปุ่มชนิดเดียว ไม่เป็น grid/card ใหญ่และไม่แสดงก่อนค้นคำ; หน้าเริ่มต้นไม่มี category cards. Summary แบ่งตามประเภทหลัก OPEX / CAPEX / both / Direct Pay / unknown และนับรหัสสินค้า ไม่ใช่จำนวน Group. Direct Pay ใช้ Z* ก่อนจัดประเภทบัญชีเพื่อไม่ซ้ำยอด แต่เก็บข้อมูล GL/Asset และ CAPEX/OPEX ตามต้นฉบับไว้ใน detail. มือถือใช้ horizontal scrolling ภายในแถว ไม่ทำให้ทั้งหน้าล้น.
 
-## Gemini Cloud migration
+## Gemma 4 Cloud migration
 
-AI รุ่นปัจจุบันเรียก Gemini ผ่าน Cloudflare backend ไม่โหลดโมเดล local แล้ว. UI แจ้งสถานะรอ backend อย่างตรงไปตรงมา มี consent ส่งข้อมูลออก, human verification, progress, cancel, quota errors และถามข้อมูลเพิ่มเมื่อระบุรหัสไม่ได้. การทดสอบ UI ใช้ backend mocks; ยังต้องวัดความแม่นยำจริงหลังตั้ง credentials.
+AI รุ่นปัจจุบันเรียก AI ผ่าน Cloudflare backend ไม่โหลดโมเดล local แล้ว. UI แจ้งสถานะรอ backend อย่างตรงไปตรงมา มี consent ส่งข้อมูลออก, human verification, progress, cancel, quota errors และถามข้อมูลเพิ่มเมื่อระบุรหัสไม่ได้. การทดสอบ UI ใช้ backend mocks; ยังต้องวัดความแม่นยำจริงหลังตั้ง credentials.
+
+## Cloud AI รุ่นปัจจุบัน
+
+Gemma 4 ผ่าน Workers AI; ผลลัพธ์สั้น Code เด่น พร้อมดูรายละเอียดและคัดลอกรหัส. เลือกด้วย reference ที่ server map กับ Master. ดู TESTING.md.

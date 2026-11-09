@@ -1,5 +1,6 @@
-import {excludedGroupCode,isDirectPay,resultCategory,materialGroupType,groupTypeLabels,summarizeMaterialTypes} from './master-core.js?v=gemini-6';
-import {openAssistant,cancelAssistant,suggest} from './assistant.js?v=gemini-6';
+import {retrieveCandidates} from './candidate-search.js?v=cloud-7';
+import {excludedGroupCode,isDirectPay,resultCategory,materialGroupType,groupTypeLabels,summarizeMaterialTypes} from './master-core.js?v=cloud-7';
+import {openAssistant,cancelAssistant,suggest} from './assistant.js?v=cloud-7';
 import {classifyBudget,budgetLabels} from './classification.js';
 
 const $=id=>document.getElementById(id);
@@ -102,26 +103,15 @@ function setMode(isImage){
  imageMode=isImage;$('textSearchPanel').hidden=isImage;$('imagePanel').hidden=!isImage;
  for(const [id,selected]of [['textTab',!isImage],['imageTab',isImage]]){$(id).setAttribute('aria-selected',String(selected));$(id).tabIndex=selected?0:-1}
  $('searchButtonLabel').textContent=isImage?'ค้นหาจากภาพด้วย AI':'ค้นหารายการ';
- $('searchHint').textContent=isImage?'AI ช่วยหาประเภทสินค้าใกล้เคียงจากภาพ · ฟรีบนเครื่อง':'ค้นหาได้ทั้งภาษาไทย อังกฤษ และรหัสสินค้า';
+ $('searchHint').textContent=isImage?'แนบภาพเพื่อให้ AI cloud ช่วยค้นหารายการใน Master':'ค้นหาได้ทั้งภาษาไทย อังกฤษ และรหัสสินค้า';
 }
 function removeImage(){image=null;$('imageError').hidden=true;$('photo').value='';$('imageSelected').hidden=true;$('preview').removeAttribute('src');$('assistantImageNote').hidden=true}
-function retrieveCandidates(terms){
- const phrases=[...new Set(terms.map(t=>normalize(t).trim()).filter(Boolean))];
- const stop=new Set(['the','for','and','with','from','used','use','เครื่อง','อุปกรณ์','ต้องการ']);
- const words=[...new Set(phrases.flatMap(t=>t.split(/[\s/(),._-]+/)).filter(t=>t.length>2&&!stop.has(t)))];
- return items.map(i=>{
-  const name=normalize(i.name),group=normalize(i.g.name);let score=0;
-  for(const phrase of phrases){if(normalize(i.code)===phrase)score+=1000;if(normalize(i.g.code)===phrase)score+=500;if(name.includes(phrase))score+=25;if(group.includes(phrase))score+=30;}
-  for(const word of words){if(name.includes(word))score+=8;if(group.includes(word))score+=7;else if(i.text.includes(word))score+=2;}
-  return {i,score};
- }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i.code.localeCompare(b.i.code)).slice(0,60).map(({i})=>({id:recordId(i),materialCode:i.m[0],description:i.name,materialGroup:i.g.code,groupName:i.g.name,taxonomy:i.g.levels,gl:i.g.gl,assetClasses:i.g.assets,budget:classifyBudget(i.g),budgetLabel:budget(i),directPay:isDirectPay(i.g.code)}));
-}
 
 async function askAI({fromDrawer=false}={}){
  if(fromDrawer){if(imageMode)$('imageQuery').value=$('assistantQuery').value;else $('query').value=$('assistantQuery').value}
  const query=imageMode?$('imageQuery').value:$('query').value;
  if(!db){openAssistant();$('assistantStatus').textContent='กำลังเตรียม master data โปรดรอสักครู่ แล้วกดวิเคราะห์อีกครั้ง';return}
- await suggest(query,imageMode?image:null,retrieveCandidates,id=>{const i=items.find(i=>recordId(i)===id);if(i)detail(i)});
+ await suggest(query,imageMode?image:null,terms=>retrieveCandidates(items,terms),id=>{const i=items.find(i=>recordId(i)===id);if(i)detail(i)});
 }
 $('form').onsubmit=e=>{e.preventDefault();if(imageMode){if(!image){notify('เลือกรูปสินค้าก่อนเริ่มค้นหาจากภาพ');$('photo').focus();return}askAI()}else{if(!$('query').value.trim()){notify('พิมพ์ชื่อ รหัสสินค้า หรือ Material group ก่อนค้นหา');$('query').focus();return}searched=true;browseAll=false;search({scroll:true})}};
 for(const id of ['commodity','budget','sort'])$(id).onchange=()=>search();
@@ -152,7 +142,7 @@ const mobileFilters=matchMedia('(max-width: 800px)');const resizeFilters=()=>$('
 async function loadMaster(){
  $('resultSummary').hidden=true;$('dataError').hidden=true;$('searchButton').disabled=true;$('resultsSection').setAttribute('aria-busy','true');$('stats').textContent='กำลังเตรียมข้อมูลสำหรับค้นหา…';$('status').textContent='กำลังโหลดข้อมูล…';$('welcome').hidden=true;$('emptyState').hidden=true;$('more').hidden=true;$('list').innerHTML='<div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div>';
  try{
-  const response=await fetch('data.json?v=gemini-6',{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error();
+  const response=await fetch('data.json?v=cloud-7',{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error();
   db=await response.json();db.groups=db.groups.filter(g=>!excludedGroupCode(g.code));db.materials=db.materials.filter(m=>!excludedGroupCode(m[2]));groups=new Map(db.groups.map(g=>[g.code,g]));
   const fallback=code=>({code,name:'ยังไม่มีข้อมูลกลุ่มสินค้า',levels:[],gl:{},assets:[],keywords:[]});
   items=db.materials.map(m=>({kind:'materials',code:m[0],name:m[1],m,g:groups.get(m[2])||fallback(m[2])}));

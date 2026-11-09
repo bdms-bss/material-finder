@@ -1,71 +1,37 @@
-# Current: Gemini Cloud integration
+# Gemma 4 on Cloudflare Workers AI — verification 2026-11-09
 
-ปัจจุบันใช้ Gemini backend. Tests ด้านล่างที่กล่าวถึง local inference เป็นประวัติเวอร์ชันเก่า ไม่ใช่ผลทดสอบโมเดล cloud. **ยังไม่ได้เรียก Gemini จริง เนื่องจาก Turnstile ใน browser อัตโนมัติหมดเวลาก่อน inference. เจ้าของใส่ Gemini key แล้วและยืนยัน Free tier ไม่เปิด Billing; ย้าย key จาก plain variable เป็น Secret แล้วโดยไม่แสดงค่า. Worker deploy แล้วที่ `https://bdms-material-gemini.bdms-material-finder.workers.dev`; ตรวจจริงแล้วว่า health ตอบ `configured:false`, AI endpoint ปฏิเสธด้วย 503 เมื่อขาด key และ origin อื่นถูกปฏิเสธด้วย 403. หลังใส่ key แล้ว health ตอบ `configured:true`, invalid token ตอบ 403 `HUMAN_CHECK_FAILED`. หน้าเว็บจริงผ่านการตรวจ Material search, readiness, consent gate และไม่มี local model download/JS errors. การทดสอบนี้ไม่เรียกโมเดล.**
+## Real model calls
 
-# Verification of free local AI
+Model: `@cf/google/gemma-4-26b-a4b-it`. Invoked through authenticated Cloudflare REST API via the connected Cloudflare plugin, without provider mocks or personal Gemini keys. Inputs and outputs are retained in `tests/fixtures/live-ai-20261109.json`; replay tests are explicitly recorded-response tests, not fresh inference on every `npm test`.
 
-ทดสอบใน Chromium บน Linux ก่อนเผยแพร่ โดยใช้โมเดลจริงจาก Hugging Face ผ่าน CPU/WASM (ไม่มี token, API key หรือ mocked AI response):
+| Input | Observed result after short-reference ranking | Master check |
+|---|---|---|
+| Pulse oximeter image; no product name in query | เครื่องวัดออกซิเจนปลายนิ้ว → MEQ9000144 | C03030200, L0 C, CAPEX/OPEX |
+| Wheelchair image; no product name in query | รถเข็นวีลแชร์ → MEQ9000115 | C02060100, L0 C, CAPEX/OPEX |
+| อยากได้ถุงมือใส่ตรวจคนไข้ | Asks sterile/non-sterile; no arbitrary code | No unsafe random glove choice |
+| ถุงมือไนไตรล์ไม่ปราศเชื้อ ขนาด M สำหรับตรวจคนไข้ | 42132203000013 | Nitrile exam #M, B01031011, L0 B, OPEX |
 
-| Input | Observed result |
-|---|---|
-| `อยากได้ถุงมือใส่ตรวจคนไข้` | เข้าใจว่าใกล้เคียงถุงมือตรวจโรค และเสนอ actual master codes เช่น `42132205000229`, `42132203000013`, `MSP0004873` พร้อม L0 `B · MEDICAL SUPPLY & INSTRUMENT` |
-| ภาพรถเข็นผู้ป่วยจาก Wikimedia | CLIP ระบุแนวคิด `hospital wheelchair` และคืน candidate กลุ่มรถเข็น/Material ที่มีจริง เช่น `C02060000`, `42192210000059` พร้อม L0 `C · MEDICAL EQUIPMENT` |
+Before short-reference ranking, live model tests exposed missing zeros in long IDs and irrelevant brand alternatives. The implementation now supplies r1/r2 references, a JSON schema enum, server-side mapping, one result per group, and browser whitelist checks. Never assume the model can safely reproduce SAP codes from memory.
 
-ข้อสังเกตจากการทดสอบและการแก้ไข:
+Images used only for QA and not bundled into the website:
+- Pulse oximeter: https://www.shop-beurer.com/products/beurer-pulse-oximeter-po30 (official product photo, resized to 640px for the test)
+- Wheelchair: https://commons.wikimedia.org/wiki/File:Man_in_wheelchair_with_AFO_braces_and_crutches_b.jpg (resized to 640px)
 
-- ไลบรารีรุ่นแรกมี bare module dependency ที่ browser resolve ไม่ได้ → เปลี่ยนเป็น Transformers.js 3.0.2 ที่ bundle runtime ได้
-- การค้นแบบ OR ของคำ `surgical` ทำให้มี gowns ปน → จำกัด candidate ให้มี concept anchor ในชื่อ Material/Group และใช้คำไทยช่วยแยก exam/surgical gloves
-- การจัดอันดับจากภาพมี wheelchair แบบเฉพาะทางปน → แสดงกลุ่มทั่วไปที่ตรงแนวคิดก่อน เมื่อภาพไม่ได้ยืนยันรายละเอียดสเปก
-- เพิ่ม version query ใน app/assistant/worker imports เพื่อลดปัญหา JS เก่า/ใหม่ปนกันหลัง deploy
+This is a small task-specific sample, not a general accuracy benchmark. Image recognition does not verify brand/model equivalence, sterility, dimensions or plant Catalog availability. Candidate retrieval is lexical with model-expanded terms and group diversity, not a full semantic/vector index.
 
-ทดสอบ UI/error handling ด้วย Worker จำลองแยกจากการทดสอบโมเดลจริง:
+## Automated regression
 
-- ปิด sessionStorage แล้วยังเปิดเว็บ/AI panel ได้ ไม่มี JavaScript exception
-- ทุก card ในหน้าค้นหาแสดง L0 ชัดเจน
-- ดาวน์โหลดโมเดลไม่สำเร็จ → แสดง error และ fallback ที่ระบุว่าเป็นผลค้นหาข้อความ ไม่ใช่ AI
-- กดยกเลิกแล้ว worker หยุดและปุ่มส่งกลับมาใช้งานได้
-- viewport มือถือ 390 px ไม่มี horizontal overflow
+- `npm run check`: JS syntax for browser and Worker modules.
+- `npm test`: 17 tests, including candidate/reference validation, real-output replay, source exclusions, accounting types, quota/invalid response fail-closed behavior, hostname/action verification, request/image bounds and no paid fallback.
+- `npm run test:ui`: backend/Turnstile mocks; covers pending/ready config, consent, text and resized image flow, short results, copy code, detail dialog, clarification, quota, cancel, group search, type counts, mobile widths and loading retries.
+- Axe-core WCAG tests in home, facets, details, AI and mobile states: zero violations in tested tags.
+- Wrangler dry-run: AI binding and rate limiter recognized; no credentials in source/bundle.
 
-`npm test` ตรวจรหัส candidate, vocabulary consistency, CAPEX/OPEX business rules และการ exclude deleted/inactive records. Catalog reconciliation กับ source workbook ผ่านในการอัปเดต exclusion ก่อนหน้า.
+## Production checks
 
-ภาพทดสอบ: [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Man_in_wheelchair_with_AFO_braces_and_crutches_b.jpg). ใช้เฉพาะใน local QA ไม่ได้รวมรูปใน repo หรือส่งไป AI cloud.
+Production frontend: https://bdms-bss.github.io/material-finder/
+Backend: https://bdms-material-gemini.bdms-material-finder.workers.dev
 
-ผลทดสอบนี้ไม่ใช่การรับรองความแม่นยำของทุกสินค้า/ภาพ. ต้องตรวจรายละเอียดชนิด รุ่น ขนาด และสเปกก่อนเปิด PR.
+Real Turnstile remains mandatory on both AI stages. Never use test keys or disable verification on production to make automated tests pass. Automated cloud browsers can be challenged; UI regression mocks and authenticated live model checks above are separate evidence, not a claim that CAPTCHA was bypassed.
 
-## UX/UI redesign regression
-
-ทดสอบโมเดลจริงอีกครั้งกับ UI ใหม่ก่อนเผยแพร่ โดยรัน source ใหม่บน browser context เดิมที่มี cache ของโมเดล:
-
-- ข้อความภาษาไทย → ได้ candidate ถุงมือตรวจโรค และแสดง L0 จาก master
-- ภาพรถเข็น → ได้กลุ่มทั่วไป `C02060000 · WHEELCHAIR` ก่อนกลุ่มเฉพาะทาง พร้อม L0 / CAPEX-OPEX
-- progress, completed state, modal interaction ทำงาน และไม่พบ JavaScript errors หรือ network POST requests
-
-ทดสอบ deterministic UI ด้วย `scripts/check-ui.cjs`: category → L0 filter, query, sort, load more, copy code/summary, group-vs-code warning, no results, AI drawer, cancel/fallback, keyboard tabs/Escape, invalid image, data error/retry, mobile 390/320 px และไม่แสดงผล AI เก่าหลังเปลี่ยนคำค้น. axe-core ไม่พบ violations ในสถานะที่ระบุใน [UX_DESIGN.md](UX_DESIGN.md); ไม่ใช่การรับรอง WCAG conformance ครบทุกข้อ.
-
-## BDMS branding / Material Master / category drilldown
-
-- ยืนยัน export ก่อนและหลังปรับ: ตัดเพิ่ม 13,326 Material codes และ 107 Groups เฉพาะ Material group `Z00000000` และ `M*`; รหัส Material เช่น `MSP...` ที่อยู่ในกลุ่มปกติยังอยู่
-- ข้อมูลหลังคัดกรอง: 59,172 Material codes / 11,367 Material groups; Direct Pay = 1 Material code / 183 Groups
-- การ์ดสรุปยอดแยก Material codes/Groups รวมตรงกับ export และไม่เปลี่ยนยอดของหมวดอื่นเมื่อ drilldown
-- เลือก Direct Pay แล้ว sidebar, aria-pressed, focus และรายการด้านล่างตรงกัน; กดซ้ำเพื่อล้างหมวดได้
-- โหลดโลโก้ SVG สำเร็จ และ headline เป็นข้อความกลาง ๆ Material Master
-- คำว่า Catalog ใช้เฉพาะอธิบายขอบเขต/การตรวจ Plant ไม่ใช้เป็นชื่อผลค้นหา
-- ตรวจ axe เพิ่มใน summary-facet state รวมถึง home/detail/AI/mobile results: 0 violations ในชุดตรวจ WCAG ที่ใช้อยู่
-
-## Material-code-only / compact type row
-
-- หน้าแรกและ browse โดยไม่มีคำค้นไม่แสดง summary; ส่งคำค้นจึงแสดงปุ่มประเภทหนึ่งแถว สูงไม่เกิน 48 px
-- ผลลัพธ์และ AI candidates ทุกตัวมี Material code ไม่มี Group-only cards
-- ค้นด้วย Group `B01031011` ได้จำนวน Material codes ตรงกับ master; ค้นด้วย Group description ได้รหัสสินค้าเช่นกัน
-- Group ที่ไม่มี Material code แสดง context notice และไม่มีการ์ด Group ให้เลือก
-- Direct Pay อยู่ในตัวกรองประเภท, summary, badge และเก็บ GL/Asset accounting เดิมใน detail
-- ยอด summary ไม่ซ้ำระหว่าง OPEX กับ Direct Pay และผลรวมเท่ากับ Material codes ที่พบ
-- ตรวจ Desktop และ mobile 390/320 px: strip อยู่แถวเดียว มือถือเลื่อนภายในแถว ไม่มี page overflow; axe ไม่พบ violations ในสถานะที่ตรวจ
-
-## Gemini / Cloudflare backend integration
-
-- Node tests ตรวจ intent/rank schemas, server-only x-goog-api-key, Turnstile action/hostname, CORS, rate limit, excluded/group-only candidates และไม่ echo secret/provider error
-- Cloud orchestration tests ตรวจสองขั้นพร้อม tokens แยก, skip rank เมื่อไม่มี candidate, ไม่ retry เมื่อ quota เต็ม, และ reject IDs ที่ AI แต่งขึ้น
-- Browser tests ใช้ backend/Turnstile mocks: setup pending, consent, material-only recommendations, clarification, quota/cancel, ไม่มี local model fallback พร้อม regression UI/filters/copy/mobile/accessibility
-- Wrangler deploy --dry-run ผ่าน; bundle gzip ประมาณ 5 KB, ไม่มี Master dataset หรือ key รวมใน bundle
-- ไม่ได้ deploy Cloudflare จริง และไม่ได้ทดสอบ model quality/Google quota/real Turnstile challenge; ต้องทำหลังผู้ดูแลตั้ง backend แล้ว
+Deployment-specific health/CORS/invalid-token and production-browser results are added after deployment. A successful `/api/health` checks configuration only, not model quota or inference quality.

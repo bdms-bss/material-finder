@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check docs/app.js && node --check docs/assistant.js && node --check docs/cloud-ai.js && node --check docs/classification.js && node --check docs/master-core.js && node --check backend/worker.mjs",
+    "check": "node --check docs/app.js && node --check docs/assistant.js && node --check docs/cloud-ai.js && node --check docs/classification.js && node --check docs/master-core.js && node --check backend/worker.mjs && node --check docs/candidate-search.js && node --check backend/inference.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:ui": "node scripts/check-ui.cjs"
   },

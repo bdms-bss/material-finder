@@ -1,13 +1,21 @@
-# Gemini Cloud ผ่าน backend
+# AI สำหรับ Material Finder
 
-เวอร์ชันปัจจุบันเปลี่ยนจากโมเดลที่โหลดใน browser เป็น **Google Gemini API ผ่าน Cloudflare Worker** ตามที่ผู้ดูแลเลือก. ไม่ใช้ Puter/OpenRouter และไม่ให้ผู้ใช้วาง API key ในหน้าเว็บ.
+ใช้ Gemma 4 26B A4B บน Cloudflare Workers AI ผ่าน backend. ผู้ใช้ไม่ต้องมี AI account หรือใส่ API key. ข้อมูลที่ส่งคือคำค้น ภาพ (ย่อก่อนส่ง) และ candidate จาก Master ไม่ส่ง GL/Asset ไปให้โมเดล. ผู้ใช้ยืนยันก่อนส่ง และผ่าน Turnstile.
 
-ขั้นตอนเปิดใช้: [backend/README.md](backend/README.md).
+ไม่เชื่อม Gemini หรือ Copilot ในเส้นทางนี้. การเปลี่ยนเป็น Workers AI แก้ปัญหาโมเดล Gemini เดิมไม่พร้อมใช้งาน และลดการพึ่งบัญชีส่วนตัว. Secret เดิมที่เหลืออยู่ไม่ถูกเรียกใช้.
 
-เชื่อม Worker URL และ public Turnstile Site Key ใน `docs/ai-config.json` แล้ว. หน้าเว็บตรวจ `/api/health` ก่อนเรียก AI และยังไม่เริ่มจนกว่า backend จะตั้งค่าครบ. Secret Gemini key และ Turnstile secret อยู่ใน Cloudflare เท่านั้น. การค้นหาข้อความปกติยังใช้ได้โดยไม่เรียก AI.
+## ความแม่นยำ
 
-การวิเคราะห์มีสองขั้น: ทำความเข้าใจสินค้า/สเปก → ค้น candidate จริงใน Master → ให้ Gemini ตรวจเลือกหรือถามเพิ่ม. ไม่ใช้ fixed topic vocabulary หรือ local-model download อีกต่อไป. ผลลัพธ์ยังเป็น Material code เท่านั้น และต้องตรวจ Catalog ระดับ Plant ก่อนนำไปใช้.
+โมเดลเข้าใจความหมายและภาพ ส่วนรหัสและข้อมูลบัญชีมาจาก Master. เลือกด้วย reference r1/r2 แทนการให้โมเดลคัดลอกเลขยาว. Server คืนเฉพาะ reference ที่มีจริง ไม่ซ้ำ Group สูงสุด 3 รายการ. Browser ตรวจ Material ID อีกครั้ง.
 
-ผู้ใช้ต้องยืนยันการส่งคำค้น ภาพ และ candidate ไป Cloudflare/Google ก่อน. มีโควตา/ค่าใช้จ่ายตาม Google project; ไม่รับประกันใช้ฟรีไม่จำกัด. การใช้ cloud model ไม่รับประกันความแม่นยำเอง ต้องวัดกับตัวอย่างจริงหลังตั้ง secret แล้ว.
+คำขอถุงมือที่ขาดรายละเอียดให้ถามเรื่องปราศจากเชื้อก่อน แทนเลือกสุ่มขนาดหรือชนิด. ภาพไม่ได้ยืนยันยี่ห้อ/รุ่นที่เทียบเท่ากัน และไม่ยืนยัน Catalog ของ Plant.
 
-ทดสอบโค้ดด้วย provider mocks และ Worker dry-run แล้ว แต่ยังไม่ได้ทดสอบคำตอบ Gemini จริงเพราะการยืนยัน Turnstile ใน browser อัตโนมัติหมดเวลาก่อน inference แม้ secrets ตั้งค่าครบแล้วและเจ้าของยืนยัน Free tier ไม่เปิด Billing. ดู [TESTING.md](TESTING.md) สำหรับขอบเขตการตรวจและประวัติเวอร์ชันก่อนหน้า.
+## โควตา
+
+Cloudflare Workers AI มี allocation ฟรี 10,000 Neurons/วันตามเอกสาร ณ วันที่ตรวจ. การค้นหนึ่งครั้งใช้สูงสุด 2 model calls. บัญชี Free หยุดเมื่อเกินขีดจำกัด; Paid อาจคิดเงินส่วนเกิน จึงไม่ควรเปิด Paid โดยไม่ได้อนุญาต. Rate limit ในแอปเป็นแบบประมาณต่อ location ไม่ใช่ hard budget cap. ไม่มี paid-provider fallback.
+
+https://developers.cloudflare.com/workers-ai/platform/pricing/
+
+## การตรวจสอบ
+
+ทดสอบโมเดลจริงด้วยภาพและภาษาไทยผ่าน authenticated Cloudflare API และบันทึกผลใน tests/fixtures/live-ai-20261109.json. UI tests ใช้ provider/Turnstile mocks แยกจากการทดสอบโมเดลจริง. ดู TESTING.md สำหรับขอบเขตการทดสอบหน้า production.
