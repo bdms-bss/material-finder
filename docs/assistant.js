@@ -86,7 +86,8 @@ export async function suggest(query,image,retrieve,openRecord,{mode=image?'image
   onStatus(result.records.length?`พบรายการแนะนำ ${result.records.length} รายการ · รหัสอ้างอิงจาก Master`:'กรุณาเพิ่มรายละเอียดตามคำถามเพื่อค้นหาต่อ');
   if(activeMode===mode&&$('assistantPanel').open)$('assistantOutput').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
  }catch(error){
-  if(error.name==='AbortError')onStatus('ยกเลิกหรือหมดเวลาแล้ว คำขอที่ส่งถึง AI อาจยังถูกนับโควตา');
+  if(s.sequence!==sequence)return;
+  if(signal.aborted||error.name==='AbortError')onStatus('ยกเลิกหรือหมดเวลาแล้ว คำขอที่ส่งถึง AI อาจยังถูกนับโควตา');
   else{onStatus(error.message||'เชื่อม AI ไม่สำเร็จ กรุณาลองใหม่');s.output.append(paragraph('คุณยังค้นหาจากข้อความในหน้าหลักได้ หรือเพิ่มรายละเอียดแล้วลองอีกครั้ง'))}
  }finally{clearTimeout(timeout);if(s.sequence===sequence){s.controller=null;s.busy=false;if(mode===activeMode)updateControls()}}
 }
