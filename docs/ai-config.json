@@ -1,4 +1,4 @@
 {
-  "backendUrl": "",
-  "turnstileSiteKey": ""
+  "backendUrl": "https://bdms-material-gemini.bdms-material-finder.workers.dev",
+  "turnstileSiteKey": "0x4AAAAAAF5Zd4yzAO6eSnpP"
 }

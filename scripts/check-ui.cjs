@@ -15,12 +15,14 @@ const server=http.createServer((req,res)=>{
  const page=await context.newPage(),errors=[],violations=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{
-  window.turnstileMode='success';window.cloudMode='success';window.aiCandidates=[];window.imageWasSent=false;window.Worker=class{constructor(){throw Error('Local model workers must not run')}};
+  window.backendConfigured=true;window.turnstileMode='success';window.cloudMode='success';window.aiCandidates=[];window.imageWasSent=false;window.Worker=class{constructor(){throw Error('Local model workers must not run')}};
   const widgets=new Map();let next=0;
   window.turnstile={render:(element,options)=>{const id=next++;widgets.set(id,options);return id},execute:id=>{const options=widgets.get(id);setTimeout(()=>{if(window.turnstileMode==='wait')return;options?.callback(options.action+'-test-token')},20)},remove:id=>widgets.delete(id)};
  });
  await page.route('https://gemini-test.example/api/*',async route=>{
-  const body=route.request().postDataJSON(),path=new URL(route.request().url()).pathname;
+  const path=new URL(route.request().url()).pathname;
+  if(path==='/api/health')return route.fulfill({json:{service:'bdms-gemini',configured:await page.evaluate(()=>window.backendConfigured)}});
+  const body=route.request().postDataJSON();
   assert.ok(!JSON.stringify(body).includes('GEMINI_API_KEY'));assert.equal(route.request().headers().authorization,undefined);
   const mode=await page.evaluate(()=>window.cloudMode);
   if(mode==='fail')return route.fulfill({status:429,json:{message:'โควตา Gemini เต็ม'}});
@@ -38,9 +40,11 @@ const server=http.createServer((req,res)=>{
  async function onlyMaterials(){
   const labels=await page.locator('#list .record-type').allTextContents();assert.ok(labels.length);assert.ok(labels.every(t=>t.includes('MATERIAL CODE')));
  }
+ await page.route('**/ai-config.json*',route=>route.fulfill({json:{backendUrl:'',turnstileSiteKey:''}}));
  await page.goto(base);await page.waitForSelector('#welcome:not([hidden])');
  assert.equal(await page.locator('.brand-logo').evaluate(el=>el.complete&&el.naturalWidth>0),true);
- assert.equal(await page.locator('#kind').count(),0);await page.locator('#settings').click();await page.locator('#assistantQuery').fill('ถุงมือ');await page.locator('#sendContext').click();assert.equal(await page.locator('#backendSetup').isVisible(),true);assert.match(await page.locator('#assistantStatus').innerText(),/ยังเรียก Gemini ไม่ได้/);await page.keyboard.press('Escape');await page.route('**/ai-config.json*',route=>route.fulfill({json:{backendUrl:'https://gemini-test.example',turnstileSiteKey:'public-site-key-example'}}));await page.reload();await page.waitForSelector('#welcome:not([hidden])');
+ assert.equal(await page.locator('#kind').count(),0);await page.locator('#settings').click();await page.locator('#assistantQuery').fill('ถุงมือ');await page.locator('#sendContext').click();await page.waitForFunction(()=>document.querySelector('#assistantStatus').textContent.includes('ยังเรียก Gemini ไม่ได้'));assert.equal(await page.locator('#backendSetup').isVisible(),true);assert.match(await page.locator('#assistantStatus').innerText(),/ยังเรียก Gemini ไม่ได้/);await page.keyboard.press('Escape');await page.route('**/ai-config.json*',route=>route.fulfill({json:{backendUrl:'https://gemini-test.example',turnstileSiteKey:'public-site-key-example'}}));await page.reload();await page.waitForSelector('#welcome:not([hidden])');
+ await page.evaluate(()=>window.backendConfigured=false);await page.locator('#settings').click();await page.locator('#assistantQuery').fill('glove');await page.locator('#sendContext').click();await page.waitForFunction(()=>document.querySelector('#assistantStatus').textContent.includes('ยังเรียก Gemini ไม่ได้'));assert.equal(await page.locator('#backendSetup').isVisible(),true);await page.evaluate(()=>window.backendConfigured=true);await page.keyboard.press('Escape');
  assert.equal(await page.locator('#resultSummary').isHidden(),true);assert.equal(await page.locator('.card').count(),0);
  await page.selectOption('#budget','direct-pay');assert.equal(await page.locator('#resultSummary').isHidden(),true);assert.equal(await page.locator('.card').count(),0);
  await page.locator('#resetFilters').click();await axe('home');
@@ -75,7 +79,7 @@ const server=http.createServer((req,res)=>{
  assert.ok(await page.evaluate(()=>window.aiCandidates.every(c=>c.materialCode&&c.id.startsWith('materials:'))),'AI must only recommend material-code candidates');
  await axe('AI');await page.locator('.aiRecommendation button').first().click();assert.equal(await page.locator('#detail').isVisible(),true);await page.keyboard.press('Escape');
  await page.evaluate(()=>window.turnstileMode='wait');await page.locator('#sendContext').click();await page.locator('#cancelAI').click();await page.waitForFunction(()=>!document.getElementById('sendContext').disabled);assert.match(await page.locator('#assistantStatus').innerText(),/ยกเลิก/);
- await page.evaluate(()=>{window.turnstileMode='success';window.cloudMode='fail'});await page.locator('#sendContext').click();await page.waitForFunction(()=>!document.getElementById('sendContext').disabled);assert.match(await page.locator('#assistantStatus').innerText(),/โควตา Gemini เต็ม/);assert.equal(await page.locator('.aiRecommendation').count(),0);await page.evaluate(()=>window.cloudMode='clarify');await page.locator('#sendContext').click();await page.waitForSelector('.ai-question');assert.equal(await page.locator('.aiRecommendation').count(),0);await page.evaluate(()=>window.cloudMode='success');await page.keyboard.press('Escape');
+ await page.evaluate(()=>{window.turnstileMode='success';window.cloudMode='fail'});await page.locator('#sendContext').click();await page.waitForFunction(()=>document.getElementById('assistantStatus').textContent.includes('โควตา Gemini เต็ม'));assert.match(await page.locator('#assistantStatus').innerText(),/โควตา Gemini เต็ม/);assert.equal(await page.locator('.aiRecommendation').count(),0);await page.evaluate(()=>window.cloudMode='clarify');await page.locator('#sendContext').click();await page.waitForSelector('.ai-question');assert.equal(await page.locator('.aiRecommendation').count(),0);await page.evaluate(()=>window.cloudMode='success');await page.keyboard.press('Escape');
  await page.locator('#clearQuery').click();assert.equal(await page.locator('#resultSummary').isHidden(),true);assert.equal(await page.locator('.card').count(),0);
  await page.locator('#imageTab').focus();await page.keyboard.press('ArrowLeft');assert.equal(await page.locator('#textTab').getAttribute('aria-selected'),'true');
  await page.locator('#helpButton').click();assert.equal(await page.locator('#helpDialog').isVisible(),true);await page.keyboard.press('Escape');

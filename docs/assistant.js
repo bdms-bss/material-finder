@@ -1,6 +1,7 @@
-import {validateCloudConfig,cloudSearch,prepareCloudImage} from './cloud-ai.js?v=gemini-5';
+import {validateCloudConfig,cloudSearch,prepareCloudImage} from './cloud-ai.js?v=gemini-6';
 let busy=false,controller,lastQuery='',lastImage=null,config,configPromise,scriptPromise;
 const $=id=>document.getElementById(id);
+let backendReady=false;
 function status(value){$('assistantStatus').textContent=value;$('aiProgress').removeAttribute('value')}
 function paragraph(value){const p=document.createElement('p');p.textContent=value;return p}
 export function openAssistant(){
@@ -12,12 +13,16 @@ export function openAssistant(){
  panel.hidden=false;panel.showModal();$('assistantQuery').focus();loadConfig();
 }
 async function loadConfig(){
- configPromise??=fetch('ai-config.json?v=gemini-5',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}).catch(()=>{configPromise=null;return null});
- config=await configPromise;
- $('backendSetup').hidden=validateCloudConfig(config);
- $('cloudConnection').textContent=validateCloudConfig(config)?'Gemini Cloud · ผ่าน Cloudflare backend':'Gemini Cloud · รอตั้งค่า backend';
+ configPromise??=fetch('ai-config.json?v=gemini-6',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}).catch(()=>{configPromise=null;return null});
+ config=await configPromise;backendReady=false;
+ if(validateCloudConfig(config)){
+  try{const r=await fetch(config.backendUrl+'/api/health',{cache:'no-store',signal:AbortSignal.timeout(10000)});const health=await r.json();backendReady=r.ok&&health.service==='bdms-gemini'&&health.configured===true}catch{}
+ }
+ $('backendSetup').hidden=backendReady;
+ $('cloudConnection').textContent=backendReady?'Gemini Cloud · backend ตั้งค่าครบแล้ว (ผลการเรียกขึ้นกับ key และโควตา)':'Gemini Cloud · backend ยังไม่พร้อมหรือยังตั้งค่าไม่ครบ';
  return config;
 }
+
 function loadTurnstile(){
  if(window.turnstile)return Promise.resolve();
  if(!scriptPromise)scriptPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;script.onload=()=>window.turnstile?resolve():reject(Error('โหลดระบบยืนยันไม่สำเร็จ'));script.onerror=()=>{script.remove();scriptPromise=null;reject(Error('เชื่อมระบบยืนยัน Cloudflare ไม่ได้'))};document.head.append(script)});
@@ -45,7 +50,7 @@ function showCards(records,openRecord){
 export async function suggest(query,image,retrieve,openRecord){
  openAssistant();if(busy)return;
  if(!query.trim()&&!image){status('กรุณาพิมพ์สิ่งที่ต้องการหรือแนบภาพ');return}
- const activeConfig=await loadConfig();if(busy)return;if(!validateCloudConfig(activeConfig)){status('ยังเรียก Gemini ไม่ได้: ผู้ดูแลต้อง deploy backend และตั้งค่า public URL / Turnstile site key ก่อน');return}
+ const activeConfig=await loadConfig();if(busy)return;if(!validateCloudConfig(activeConfig)||!backendReady){status('ยังเรียก Gemini ไม่ได้: backend ยังไม่พร้อมหรือยังตั้งค่า secret ไม่ครบ กรุณาตรวจการเชื่อมต่อและการตั้งค่า');return}
  if(!$('cloudConsent').checked){status('กรุณายืนยันการส่งคำค้น ภาพ และ candidate ไปยัง Cloudflare และ Google Gemini ก่อน');$('cloudConsent').focus();return}
  busy=true;lastQuery=query;lastImage=image;controller=new AbortController();const signal=controller.signal;
  const timeout=setTimeout(()=>controller?.abort(),180000);

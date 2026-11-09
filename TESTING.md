@@ -1,6 +1,6 @@
 # Current: Gemini Cloud integration
 
-ปัจจุบันใช้ Gemini backend. Tests ด้านล่างที่กล่าวถึง local inference เป็นประวัติเวอร์ชันเก่า ไม่ใช่ผลทดสอบโมเดล cloud. **ยังไม่ได้เรียก Gemini จริง เนื่องจากไม่มี Worker ที่ deploy พร้อม API key ใน session นี้.**
+ปัจจุบันใช้ Gemini backend. Tests ด้านล่างที่กล่าวถึง local inference เป็นประวัติเวอร์ชันเก่า ไม่ใช่ผลทดสอบโมเดล cloud. **ยังไม่ได้เรียก Gemini จริง เนื่องจากยังรอเจ้าของใส่ Gemini key และยืนยัน Free tier/Billing. Worker deploy แล้วที่ `https://bdms-material-gemini.bdms-material-finder.workers.dev`; ตรวจจริงแล้วว่า health ตอบ `configured:false`, AI endpoint ปฏิเสธด้วย 503 เมื่อขาด key และ origin อื่นถูกปฏิเสธด้วย 403. การทดสอบนี้ไม่เรียกโมเดล.**
 
 # Verification of free local AI
 

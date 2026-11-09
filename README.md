@@ -12,7 +12,7 @@ GitHub Settings → Pages → Deploy from a branch → main → /docs. URL: http
 
 เปลี่ยนเป็น Gemini API ผ่าน backend เพื่อใช้โมเดล cloud ตีความข้อความ/ภาพ และตรวจเลือกจาก Material Master จริง. ไม่ดาวน์โหลดโมเดลใน browser และไม่ใช้บัญชี Puter/OpenRouter. Gemini key เก็บใน Cloudflare Worker secret เท่านั้น.
 
-**สถานะ:** พร้อม deploy และทดสอบโค้ดแล้วด้วย mocks/dry-run แต่ยังรอผู้ดูแลสร้าง Worker/ตั้ง secrets จึงยังไม่ได้เรียก Gemini จริง. ดู [ขั้นตอน Deploy และเชื่อมต่อ](backend/README.md). Frontend config เก็บเฉพาะ Worker URL และ public Turnstile Site Key ใน `docs/ai-config.json`.
+**สถานะ:** Deploy Cloudflare Worker และ Turnstile แล้ว และเชื่อม public config ในเว็บแล้ว ยังรอผู้ดูแลใส่ `GEMINI_API_KEY` ใน Worker จึงยังไม่ได้เรียก Gemini จริง. ดู [ขั้นตอน Deploy และเชื่อมต่อ](backend/README.md). Frontend config เก็บเฉพาะ Worker URL และ public Turnstile Site Key ใน `docs/ai-config.json`.
 
 ผู้ใช้ยืนยันส่งคำค้น/ภาพ/รายการ candidate ไป Cloudflare และ Google ก่อนเรียก. หนึ่งคำถามใช้ได้สูงสุด 2 Gemini calls; โควตาและค่าใช้จ่ายตาม Google project ไม่ใช่ฟรีไม่จำกัด. AI เลือกได้เฉพาะ Material codes ใน candidate; เมื่อสเปกไม่ชัดสามารถถามเพิ่มแทนเดารหัส. GL/Asset/Taxonomy และการจัดประเภทใช้ข้อมูล Master เดิม.
 
