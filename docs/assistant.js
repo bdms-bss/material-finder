@@ -1,4 +1,4 @@
-import {validateCloudConfig,cloudSearch,prepareCloudImage} from './cloud-ai.js?v=cloud-7';
+import {validateCloudConfig,cloudSearch,prepareCloudImage} from './cloud-ai.js?v=cloud-8';
 let busy=false,controller,lastQuery='',lastImage=null,config,configPromise,scriptPromise;
 const $=id=>document.getElementById(id);
 let backendReady=false;
@@ -13,7 +13,7 @@ export function openAssistant(){
  panel.hidden=false;panel.showModal();$('assistantQuery').focus();loadConfig();
 }
 async function loadConfig(){
- configPromise??=fetch('ai-config.json?v=cloud-7',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}).catch(()=>{configPromise=null;return null});
+ configPromise??=fetch('ai-config.json?v=cloud-8',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}).catch(()=>{configPromise=null;return null});
  config=await configPromise;backendReady=false;
  if(validateCloudConfig(config)){
   try{const r=await fetch(config.backendUrl+'/api/health',{cache:'no-store',signal:AbortSignal.timeout(10000)});const health=await r.json();backendReady=r.ok&&health.service==='bdms-ai'&&health.configured===true}catch{}
@@ -25,7 +25,7 @@ async function loadConfig(){
 
 function loadTurnstile(){
  if(window.turnstile)return Promise.resolve();
- if(!scriptPromise)scriptPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;script.onload=()=>window.turnstile?window.turnstile.ready(resolve):reject(Error('โหลดระบบยืนยันไม่สำเร็จ'));script.onerror=()=>{script.remove();scriptPromise=null;reject(Error('เชื่อมระบบยืนยัน Cloudflare ไม่ได้'))};document.head.append(script)});
+ if(!scriptPromise)scriptPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;const timer=setTimeout(()=>{script.remove();scriptPromise=null;reject(Error('โหลดระบบยืนยันนานเกินไป กรุณาลองใหม่'))},15000);script.onload=()=>{clearTimeout(timer);window.turnstile?resolve():reject(Error('โหลดระบบยืนยันไม่สำเร็จ'))};script.onerror=()=>{clearTimeout(timer);script.remove();scriptPromise=null;reject(Error('เชื่อมระบบยืนยัน Cloudflare ไม่ได้'))};document.head.append(script)});
  return scriptPromise;
 }
 async function getToken(action,signal){
