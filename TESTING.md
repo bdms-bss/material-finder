@@ -44,3 +44,14 @@ Deployment-specific health/CORS/invalid-token and production-browser results are
 - Live browser found a loader issue introduced by using turnstile.ready() with an async script. Fixed by resolving on script.onload and bounding script load to 15 seconds. A new browser run had zero application JS errors and displayed the real interactive verification checkbox. No CAPTCHA bypass or test keys were added to production.
 - Full public-site inference remains pending human-verification approval in the test browser; no claim of complete public CAPTCHA-to-inference automation.
 - `npm run test:ai-replay`: actual Worker handler and browser render recorded real model outputs, verifying pulse image → MEQ9000144, nitrile M → 42132203000013, L0/accounting, copy and mobile layout. Provider/Turnstile are replay mocks in this test. Set PULSE_TEST_IMAGE to a local image to exercise image resize with that file; otherwise a small PNG tests the upload path only. CHROMIUM_PATH selects the installed browser.
+
+## Automatic text fallback and separate AI contexts
+
+`CHROMIUM_PATH=/usr/bin/chromium npm run test:auto-ai` verifies:
+- A Master match does not invoke AI; filters hiding an existing match do not invoke AI either.
+- A submitted nonempty query with zero matches opens text AI automatically. No inference before consent; consenting resumes pending text search without another AI-button click.
+- Typing alone, initial page load and repeated successful identical automatic queries do not add model calls.
+- Text/image queries, results, consent and image preview are isolated. Text requests have image:null even after image search.
+- Image requests contain resized image data. Returning to the other mode restores its own results/draft.
+- Cancelling a delayed request prevents its reply from overwriting the other mode.
+This browser test uses provider and Turnstile mocks; live inference evidence above is unchanged. No new paid services or backend providers are introduced.

@@ -1,6 +1,6 @@
-import {retrieveCandidates} from './candidate-search.js?v=cloud-9';
-import {excludedGroupCode,isDirectPay,resultCategory,materialGroupType,groupTypeLabels,summarizeMaterialTypes} from './master-core.js?v=cloud-9';
-import {openAssistant,cancelAssistant,suggest} from './assistant.js?v=cloud-9';
+import {retrieveCandidates} from './candidate-search.js?v=cloud-10';
+import {excludedGroupCode,isDirectPay,resultCategory,materialGroupType,groupTypeLabels,summarizeMaterialTypes} from './master-core.js?v=cloud-10';
+import {openAssistant,cancelAssistant,suggest,setAssistantContext,getAssistantMode} from './assistant.js?v=cloud-10';
 import {classifyBudget,budgetLabels} from './classification.js';
 
 const $=id=>document.getElementById(id);
@@ -34,12 +34,13 @@ function search({scroll=false}={}){
  $('welcome').hidden=!start;$('resultSummary').hidden=start||!searched||!q;$('sort').disabled=start;$('emptyState').hidden=true;
  $('clearQuery').hidden=!query;
  renderFilters();
- if(start){results=[];$('groupMatchNotice').hidden=true;$('resultTitle').textContent='ข้อมูลอ้างอิง Material Master';$('status').textContent='เลือกคำแนะนำ หรือพิมพ์ชื่อสินค้าในช่องค้นหา';$('list').replaceChildren();$('more').hidden=true;return}
- baseResults=items.map(i=>{
+ if(start){baseResults=[];results=[];$('groupMatchNotice').hidden=true;$('resultTitle').textContent='ข้อมูลอ้างอิง Material Master';$('status').textContent='เลือกคำแนะนำ หรือพิมพ์ชื่อสินค้าในช่องค้นหา';$('list').replaceChildren();$('more').hidden=true;return}
+ const matchingItems=items.map(i=>{
   let score=q?(normalize(i.code)===q?1000:normalize(i.g.code)===q?500:normalize(i.name).includes(q)?100:normalize(i.g.name).includes(q)?60:0):1;
   if(q)for(const t of tokens)if(i.text.includes(t))score+=10;
   return {...i,score};
- }).filter(i=>i.score>0&&(!$('commodity').value||resultCategory(i).key===$('commodity').value));
+ }).filter(i=>i.score>0);
+ baseResults=matchingItems.filter(i=>!$('commodity').value||resultCategory(i).key===$('commodity').value);
  renderSummary();
  results=baseResults.filter(i=>!$('budget').value||materialGroupType(i.g)===$('budget').value);
  const matchedGroups=q?db.groups.filter(g=>normalize(g.code)===q||normalize(g.name).includes(q)).slice(0,3):[];
@@ -50,6 +51,7 @@ function search({scroll=false}={}){
  $('resultTitle').textContent=query?`ผลการค้นหา “${query}”`:'รายการใน Material Master';
  renderResults();
  if(scroll)$('resultsSection').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
+ return {query,totalMatches:matchingItems.length};
 }
 function renderSummary(){
  const area=$('summaryCards');area.replaceChildren();
@@ -100,22 +102,28 @@ function detail(i){
 function summary(i){return [i.name,i.m?'Material code: '+i.code:'Material code: ไม่มี (รายการระดับกลุ่ม)','Material group: '+i.g.code+' — '+i.g.name,'L0: '+l0(i),'ประเภทค่าใช้จ่าย: '+budget(i),'ประเภทกลุ่ม: '+(isDirectPay(i.g.code)?'Direct Pay (Z*)':'ตาม Commodity L0'),...Object.entries(i.g.gl).map(([d,c])=>'GL-'+d+': '+c+' — '+(db.gl[c]||'')),'Asset class: '+(i.g.assets.join(', ')||'ยังไม่มีข้อมูล'),...i.g.levels.flatMap((l,n)=>l.some(Boolean)?['L'+n+': '+l[0]+' — '+l[1]]:[]),'อ้างอิง Material Master 30 ต.ค. 2026','ไม่มีข้อมูล Catalog ระดับ Plant ในระบบนี้ โปรดตรวจสอบก่อนนำไปเปิด PR'].join('\n')}
 function resetFilters(){for(const id of ['commodity','budget'])$(id).value='';browseAll=false;search()}
 function setMode(isImage){
- imageMode=isImage;$('textSearchPanel').hidden=isImage;$('imagePanel').hidden=!isImage;
+ imageMode=isImage;setAssistantContext(assistantContext(isImage?'image':'text'));$('textSearchPanel').hidden=isImage;$('imagePanel').hidden=!isImage;
  for(const [id,selected]of [['textTab',!isImage],['imageTab',isImage]]){$(id).setAttribute('aria-selected',String(selected));$(id).tabIndex=selected?0:-1}
  $('searchButtonLabel').textContent=isImage?'ค้นหาจากภาพด้วย AI':'ค้นหารายการ';
- $('searchHint').textContent=isImage?'แนบภาพเพื่อให้ AI cloud ช่วยค้นหารายการใน Master':'ค้นหาได้ทั้งภาษาไทย อังกฤษ และรหัสสินค้า';
+ $('searchHint').textContent=isImage?'แนบภาพเพื่อให้ AI cloud ช่วยค้นหารายการใน Master':'ค้นหาใน Master ก่อน · หากไม่พบ ระบบจะค้นด้วย AI ต่อให้อัตโนมัติ';
 }
-function removeImage(){image=null;$('imageError').hidden=true;$('photo').value='';$('imageSelected').hidden=true;$('preview').removeAttribute('src');$('assistantImageNote').hidden=true}
+function removeImage(){image=null;$('imageError').hidden=true;$('photo').value='';$('imageSelected').hidden=true;$('preview').removeAttribute('src');$('assistantImageNote').hidden=true;if(imageMode)setAssistantContext(assistantContext('image'))}
 
-async function askAI({fromDrawer=false}={}){
- if(fromDrawer){if(imageMode)$('imageQuery').value=$('assistantQuery').value;else $('query').value=$('assistantQuery').value}
- const query=imageMode?$('imageQuery').value:$('query').value;
- if(!db){openAssistant();$('assistantStatus').textContent='กำลังเตรียม master data โปรดรอสักครู่ แล้วกดวิเคราะห์อีกครั้ง';return}
- await suggest(query,imageMode?image:null,terms=>retrieveCandidates(items,terms),id=>{const i=items.find(i=>recordId(i)===id);if(i)detail(i)});
+function assistantContext(mode=imageMode?'image':'text'){return {mode,query:$(mode==='image'?'imageQuery':'query').value,image:mode==='image'?image:null}}
+function openCurrentAssistant(){openAssistant(assistantContext())}
+async function askAI({fromDrawer=false,mode=imageMode?'image':'text',automatic=false}={}){
+ if(fromDrawer){mode=getAssistantMode();$(mode==='image'?'imageQuery':'query').value=$('assistantQuery').value}
+ const context=assistantContext(mode);
+ if(!db){openAssistant(context);$('assistantStatus').textContent='กำลังเตรียม master data โปรดรอสักครู่ แล้วกดค้นหาอีกครั้ง';return}
+ await suggest(context.query,context.image,terms=>retrieveCandidates(items,terms),id=>{const i=items.find(i=>recordId(i)===id);if(i)detail(i)},{mode,automatic});
 }
-$('form').onsubmit=e=>{e.preventDefault();if(imageMode){if(!image){notify('เลือกรูปสินค้าก่อนเริ่มค้นหาจากภาพ');$('photo').focus();return}askAI()}else{if(!$('query').value.trim()){notify('พิมพ์ชื่อ รหัสสินค้า หรือ Material group ก่อนค้นหา');$('query').focus();return}searched=true;browseAll=false;search({scroll:true})}};
+async function submitTextSearch(){
+ searched=true;browseAll=false;const outcome=search({scroll:true});
+ if(outcome?.query&&outcome.totalMatches===0)await askAI({mode:'text',automatic:true});
+}
+$('form').onsubmit=e=>{e.preventDefault();if(imageMode){if(!image){notify('เลือกรูปสินค้าก่อนเริ่มค้นหาจากภาพ');$('photo').focus();return}askAI({mode:'image'})}else{if(!$('query').value.trim()){notify('พิมพ์ชื่อ รหัสสินค้า หรือ Material group ก่อนค้นหา');$('query').focus();return}submitTextSearch()}};
 for(const id of ['commodity','budget','sort'])$(id).onchange=()=>search();
-for(const b of document.querySelectorAll('[data-q]'))b.onclick=()=>{setMode(false);$('query').value=b.dataset.q;searched=true;browseAll=false;search({scroll:true})};
+for(const b of document.querySelectorAll('[data-q]'))b.onclick=()=>{setMode(false);$('query').value=b.dataset.q;submitTextSearch()};
 for(const b of document.querySelectorAll('[data-commodity]'))b.onclick=()=>{setMode(false);$('query').value='';$('commodity').value=b.dataset.commodity;searched=false;browseAll=true;search({scroll:true})};
 document.querySelector('.skip-link').onclick=()=>setMode(false);
 $('query').oninput=()=>{$('clearQuery').hidden=!$('query').value;if(!$('query').value.trim()){searched=false;browseAll=false;search()}};
@@ -126,8 +134,9 @@ $('more').onclick=()=>{const old=shown;shown+=20;renderResults();$('list').query
 $('detail').querySelector('.close').onclick=()=>$('detail').close();$('closeDetail').onclick=()=>$('detail').close();$('copySummary').onclick=()=>{if(selectedRecord)copy(summary(selectedRecord),$('copySummary'))};
 for(const id of ['detail','helpDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id)){const r=$(id).getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$(id).close()}});
 $('helpButton').onclick=()=>$('helpDialog').showModal();$('closeHelp').onclick=()=>$('helpDialog').close();
-$('settings').onclick=openAssistant;$('sidebarAI').onclick=openAssistant;$('aiButton').onclick=()=>askAI();
+$('settings').onclick=openCurrentAssistant;$('sidebarAI').onclick=openCurrentAssistant;$('aiButton').onclick=()=>askAI();
 $('closeAssistant').onclick=()=>$('assistantPanel').close();$('assistantPanel').addEventListener('close',()=>$('assistantPanel').hidden=true);
+$('assistantQuery').addEventListener('input',()=>{$(getAssistantMode()==='image'?'imageQuery':'query').value=$('assistantQuery').value});
 $('cancelAI').onclick=cancelAssistant;$('sendContext').onclick=()=>askAI({fromDrawer:true});
 $('textTab').onclick=()=>setMode(false);$('imageTab').onclick=()=>setMode(true);
 for(const id of ['textTab','imageTab'])$(id).onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const isImage=e.key==='End'||(['ArrowLeft','ArrowRight'].includes(e.key)&&id==='textTab');setMode(isImage);$(isImage?'imageTab':'textTab').focus()}};
@@ -135,14 +144,14 @@ $('removeImage').onclick=removeImage;
 $('photo').onchange=()=>{
  const file=$('photo').files[0];if(!file)return;
  if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){removeImage();$('imageError').textContent='ใช้รูป JPEG, PNG หรือ WebP ขนาดไม่เกิน 5 MB กรุณาเลือกรูปใหม่';$('imageError').hidden=false;return}
- $('imageError').hidden=true;const reader=new FileReader();reader.onload=()=>{image=reader.result;$('preview').src=image;$('photoName').textContent=file.name;$('imageSelected').hidden=false};reader.onerror=()=>{$('imageError').textContent='อ่านรูปไม่สำเร็จ กรุณาเลือกรูปใหม่';$('imageError').hidden=false};reader.readAsDataURL(file);
+ $('imageError').hidden=true;const reader=new FileReader();reader.onload=()=>{image=reader.result;$('preview').src=image;$('photoName').textContent=file.name;$('imageSelected').hidden=false;if(imageMode)setAssistantContext(assistantContext('image'))};reader.onerror=()=>{$('imageError').textContent='อ่านรูปไม่สำเร็จ กรุณาเลือกรูปใหม่';$('imageError').hidden=false};reader.readAsDataURL(file);
 };
 document.addEventListener('keydown',e=>{const editing=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);if(e.key==='/'&&!editing&&!document.querySelector('dialog[open]')){e.preventDefault();setMode(false);$('query').focus()}});
 const mobileFilters=matchMedia('(max-width: 800px)');const resizeFilters=()=>$('filterPanel').open=!mobileFilters.matches;resizeFilters();mobileFilters.addEventListener('change',resizeFilters);
 async function loadMaster(){
  $('resultSummary').hidden=true;$('dataError').hidden=true;$('searchButton').disabled=true;$('resultsSection').setAttribute('aria-busy','true');$('stats').textContent='กำลังเตรียมข้อมูลสำหรับค้นหา…';$('status').textContent='กำลังโหลดข้อมูล…';$('welcome').hidden=true;$('emptyState').hidden=true;$('more').hidden=true;$('list').innerHTML='<div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div>';
  try{
-  const response=await fetch('data.json?v=cloud-9',{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error();
+  const response=await fetch('data.json?v=cloud-10',{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error();
   db=await response.json();db.groups=db.groups.filter(g=>!excludedGroupCode(g.code));db.materials=db.materials.filter(m=>!excludedGroupCode(m[2]));groups=new Map(db.groups.map(g=>[g.code,g]));
   const fallback=code=>({code,name:'ยังไม่มีข้อมูลกลุ่มสินค้า',levels:[],gl:{},assets:[],keywords:[]});
   items=db.materials.map(m=>({kind:'materials',code:m[0],name:m[1],m,g:groups.get(m[2])||fallback(m[2])}));

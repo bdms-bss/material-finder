@@ -63,3 +63,9 @@ AI รุ่นปัจจุบันเรียก AI ผ่าน Cloudflar
 ## Cloud AI รุ่นปัจจุบัน
 
 Gemma 4 ผ่าน Workers AI; ผลลัพธ์สั้น Code เด่น พร้อมดูรายละเอียดและคัดลอกรหัส. เลือกด้วย reference ที่ server map กับ Master. ดู TESTING.md.
+
+## Automatic fallback and input-mode separation
+
+Submit text → Master search → only if there are no matches anywhere in Master, open text AI. If a filter removes otherwise matching records, keep the ordinary empty/filter state. First text-AI consent resumes pending automatic work; no model request before consent. Do not rerun successful identical automatic queries unnecessarily.
+
+The assistant drawer has an explicit text/image title, separate draft/output/consent per mode, and a photo preview only in image mode. A retained photo cannot leak into text requests. Switching mode or closing during a request aborts the browser flow; late replies cannot change the active mode. Image mode requires an actual image and does not silently become text-only search.
