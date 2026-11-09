@@ -1,6 +1,6 @@
 # Current: Gemini Cloud integration
 
-ปัจจุบันใช้ Gemini backend. Tests ด้านล่างที่กล่าวถึง local inference เป็นประวัติเวอร์ชันเก่า ไม่ใช่ผลทดสอบโมเดล cloud. **ยังไม่ได้เรียก Gemini จริง เนื่องจากยังรอเจ้าของใส่ Gemini key และยืนยัน Free tier/Billing. Worker deploy แล้วที่ `https://bdms-material-gemini.bdms-material-finder.workers.dev`; ตรวจจริงแล้วว่า health ตอบ `configured:false`, AI endpoint ปฏิเสธด้วย 503 เมื่อขาด key และ origin อื่นถูกปฏิเสธด้วย 403. การทดสอบนี้ไม่เรียกโมเดล.**
+ปัจจุบันใช้ Gemini backend. Tests ด้านล่างที่กล่าวถึง local inference เป็นประวัติเวอร์ชันเก่า ไม่ใช่ผลทดสอบโมเดล cloud. **ยังไม่ได้เรียก Gemini จริง เนื่องจาก Turnstile ใน browser อัตโนมัติหมดเวลาก่อน inference. เจ้าของใส่ Gemini key แล้วและยืนยัน Free tier ไม่เปิด Billing; ย้าย key จาก plain variable เป็น Secret แล้วโดยไม่แสดงค่า. Worker deploy แล้วที่ `https://bdms-material-gemini.bdms-material-finder.workers.dev`; ตรวจจริงแล้วว่า health ตอบ `configured:false`, AI endpoint ปฏิเสธด้วย 503 เมื่อขาด key และ origin อื่นถูกปฏิเสธด้วย 403. หลังใส่ key แล้ว health ตอบ `configured:true`, invalid token ตอบ 403 `HUMAN_CHECK_FAILED`. หน้าเว็บจริงผ่านการตรวจ Material search, readiness, consent gate และไม่มี local model download/JS errors. การทดสอบนี้ไม่เรียกโมเดล.**
 
 # Verification of free local AI
 

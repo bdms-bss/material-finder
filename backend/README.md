@@ -1,10 +1,10 @@
 # Gemini backend บน Cloudflare Workers
 
-**สถานะ:** Deploy แล้วที่ https://bdms-material-gemini.bdms-material-finder.workers.dev และสร้าง Turnstile สำหรับ `bdms-bss.github.io` พร้อมเก็บ secret ใน Worker แล้ว. Frontend เชื่อม URL/public sitekey แล้ว แต่ยังรอเจ้าของเพิ่ม `GEMINI_API_KEY` ผ่าน Dashboard และยืนยัน Free tier/Billing ก่อนทดสอบโมเดลจริง. การตรวจ health ไม่เรียก Gemini และไม่ยืนยันความถูกต้องของ key/โควตา.
+**สถานะ:** Deploy แล้วที่ https://bdms-material-gemini.bdms-material-finder.workers.dev และสร้าง Turnstile สำหรับ `bdms-bss.github.io` พร้อมเก็บ secret ใน Worker แล้ว. Frontend เชื่อม URL/public sitekey แล้ว เจ้าของเพิ่ม Gemini key แล้วและยืนยัน Free tier ไม่เปิด Billing; key ทั้งสองเก็บเป็น Secret. Health ตอบ `configured:true`; invalid token ถูกปฏิเสธก่อน inference. การทดสอบคำตอบโมเดลจริงยังค้างที่ Turnstile ใน browser อัตโนมัติ (หมดเวลา). การตรวจ health ไม่เรียก Gemini และไม่ยืนยันความถูกต้องของ key/โควตา.
 
 ## สำหรับ deployment ปัจจุบัน
 
-ไม่ต้องสร้าง Worker หรือ Turnstile ใหม่. เปิด [Worker Settings](https://dash.cloudflare.com/7e9807c9b097f1278f2c5d696d2ea713/workers/services/view/bdms-material-gemini/production/settings) → Variables and Secrets → Add → Type **Secret**, name `GEMINI_API_KEY` → ใส่ key → Deploy. แจ้งว่าตั้งค่าแล้วโดยไม่ส่ง key ในแชต และระบุ Free tier หรือ Billing เพื่อกำหนดการทดสอบที่ไม่เกิดค่าใช้จ่ายโดยไม่ได้อนุญาต.
+Deployment นี้ตั้งค่า secrets ครบแล้ว ไม่ต้องสร้าง Worker หรือ Turnstile ใหม่. ขั้นตอนแก้ไข key ในอนาคต: เปิด [Worker Settings](https://dash.cloudflare.com/7e9807c9b097f1278f2c5d696d2ea713/workers/services/view/bdms-material-gemini/production/settings) → Variables and Secrets → Add → Type **Secret**, name `GEMINI_API_KEY` → ใส่ key → Deploy. แจ้งว่าตั้งค่าแล้วโดยไม่ส่ง key ในแชต และระบุ Free tier หรือ Billing เพื่อกำหนดการทดสอบที่ไม่เกิดค่าใช้จ่ายโดยไม่ได้อนุญาต.
 
 ขั้นตอนด้านล่างเก็บไว้สำหรับติดตั้งใหม่ในบัญชีอื่น. Deployment ปัจจุบันผ่าน Cloudflare API; การ push GitHub ไม่ deploy Worker อัตโนมัติ (GitHub Pages ยังคง deploy `/docs` ตามเดิม).
 

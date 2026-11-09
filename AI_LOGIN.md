@@ -10,4 +10,4 @@
 
 ผู้ใช้ต้องยืนยันการส่งคำค้น ภาพ และ candidate ไป Cloudflare/Google ก่อน. มีโควตา/ค่าใช้จ่ายตาม Google project; ไม่รับประกันใช้ฟรีไม่จำกัด. การใช้ cloud model ไม่รับประกันความแม่นยำเอง ต้องวัดกับตัวอย่างจริงหลังตั้ง secret แล้ว.
 
-ทดสอบโค้ดด้วย provider mocks และ Worker dry-run แล้ว แต่ยังไม่ได้ทดสอบคำตอบ Gemini จริงเพราะยังรอเจ้าของใส่ Gemini key และยืนยันสถานะ Free tier/Billing. ดู [TESTING.md](TESTING.md) สำหรับขอบเขตการตรวจและประวัติเวอร์ชันก่อนหน้า.
+ทดสอบโค้ดด้วย provider mocks และ Worker dry-run แล้ว แต่ยังไม่ได้ทดสอบคำตอบ Gemini จริงเพราะการยืนยัน Turnstile ใน browser อัตโนมัติหมดเวลาก่อน inference แม้ secrets ตั้งค่าครบแล้วและเจ้าของยืนยัน Free tier ไม่เปิด Billing. ดู [TESTING.md](TESTING.md) สำหรับขอบเขตการตรวจและประวัติเวอร์ชันก่อนหน้า.
