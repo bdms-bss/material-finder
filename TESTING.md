@@ -35,3 +35,12 @@ Backend: https://bdms-material-gemini.bdms-material-finder.workers.dev
 Real Turnstile remains mandatory on both AI stages. Never use test keys or disable verification on production to make automated tests pass. Automated cloud browsers can be challenged; UI regression mocks and authenticated live model checks above are separate evidence, not a claim that CAPTCHA was bypassed.
 
 Deployment-specific health/CORS/invalid-token and production-browser results are added after deployment. A successful `/api/health` checks configuration only, not model quota or inference quality.
+
+## Deployment checks after Workers AI migration
+
+- Worker deployment `816a1935f3cf42099811093e4b5eb78e`; frontend deployed from `9c6b507` before the last presentation polish.
+- Production `/api/health`: service bdms-ai, configured true, model @cf/google/gemma-4-26b-a4b-it.
+- Production invalid Turnstile token: HTTP 403 HUMAN_CHECK_FAILED; wrong Origin: HTTP 403 ORIGIN_NOT_ALLOWED.
+- Live browser found a loader issue introduced by using turnstile.ready() with an async script. Fixed by resolving on script.onload and bounding script load to 15 seconds. A new browser run had zero application JS errors and displayed the real interactive verification checkbox. No CAPTCHA bypass or test keys were added to production.
+- Full public-site inference remains pending human-verification approval in the test browser; no claim of complete public CAPTCHA-to-inference automation.
+- `npm run test:ai-replay`: actual Worker handler and browser render recorded real model outputs, verifying pulse image → MEQ9000144, nitrile M → 42132203000013, L0/accounting, copy and mobile layout. Provider/Turnstile are replay mocks in this test. Set PULSE_TEST_IMAGE to a local image to exercise image resize with that file; otherwise a small PNG tests the upload path only. CHROMIUM_PATH selects the installed browser.

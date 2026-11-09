@@ -1,4 +1,4 @@
-import {validateCloudConfig,cloudSearch,prepareCloudImage} from './cloud-ai.js?v=cloud-8';
+import {validateCloudConfig,cloudSearch,prepareCloudImage} from './cloud-ai.js?v=cloud-9';
 let busy=false,controller,lastQuery='',lastImage=null,config,configPromise,scriptPromise;
 const $=id=>document.getElementById(id);
 let backendReady=false;
@@ -13,7 +13,7 @@ export function openAssistant(){
  panel.hidden=false;panel.showModal();$('assistantQuery').focus();loadConfig();
 }
 async function loadConfig(){
- configPromise??=fetch('ai-config.json?v=cloud-8',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}).catch(()=>{configPromise=null;return null});
+ configPromise??=fetch('ai-config.json?v=cloud-9',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}).catch(()=>{configPromise=null;return null});
  config=await configPromise;backendReady=false;
  if(validateCloudConfig(config)){
   try{const r=await fetch(config.backendUrl+'/api/health',{cache:'no-store',signal:AbortSignal.timeout(10000)});const health=await r.json();backendReady=r.ok&&health.service==='bdms-ai'&&health.configured===true}catch{}
@@ -69,11 +69,12 @@ export async function suggest(query,image,retrieve,openRecord){
   const result=await cloudSearch({config:activeConfig,query,image:prepared,retrieve,getToken,signal,progress:status});
   signal.throwIfAborted();
   const understood=paragraph((lastImage?'จากภาพ น่าจะเป็น: ':'กำลังมองหา: ')+String(result.intent.item||query).slice(0,600));understood.className='ai-understood';$('assistantOutput').append(understood);
-  if(result.intent.requiredFeatures?.length)$('assistantOutput').append(paragraph('รายละเอียดที่ระบุ: '+result.intent.requiredFeatures.join(' · ')));
+  if(result.intent.requiredFeatures?.length){const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='ดูเงื่อนไขที่ใช้ค้นหา';details.append(summary,paragraph(result.intent.requiredFeatures.join(' · ')));$('assistantOutput').append(details)}
   if(result.question){const question=document.createElement('div');question.className='ai-question';question.append(paragraph(result.question));const edit=document.createElement('button');edit.textContent='เพิ่มรายละเอียดในคำอธิบาย';edit.onclick=()=>$('assistantQuery').focus();question.append(edit);$('assistantOutput').append(question)}
   showCards(result.records,openRecord);
   if(!result.records.length&&!result.question)$('assistantOutput').append(paragraph('ยังไม่พบรหัสที่เหมาะสมจาก Master ลองระบุประเภท ขนาด หรือการใช้งานเพิ่มเติม'));
-  status(result.records.length?`AI แนะนำ ${result.records.length} Material codes ที่ตรวจรหัสกับ Master แล้ว`:'AI ยังไม่เลือกรหัสสินค้า กรุณาเพิ่มรายละเอียดตามคำถาม');
+  status(result.records.length?`พบรายการแนะนำ ${result.records.length} รายการ · รหัสอ้างอิงจาก Master`:'กรุณาเพิ่มรายละเอียดตามคำถามเพื่อค้นหาต่อ');
+  $('assistantOutput').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
  }catch(error){
   if(error.name==='AbortError')status('ยกเลิกหรือหมดเวลาแล้ว คำขอที่ส่งถึง AI อาจยังถูกนับโควตา');
   else{status(error.message||'เชื่อม AI ไม่สำเร็จ กรุณาลองใหม่');$('assistantOutput').append(paragraph('คุณยังค้นหาจากข้อความในหน้าหลักได้ หรือเพิ่มรายละเอียดแล้วลองอีกครั้ง'))}

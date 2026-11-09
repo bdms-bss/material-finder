@@ -1,6 +1,6 @@
-import {retrieveCandidates} from './candidate-search.js?v=cloud-8';
-import {excludedGroupCode,isDirectPay,resultCategory,materialGroupType,groupTypeLabels,summarizeMaterialTypes} from './master-core.js?v=cloud-8';
-import {openAssistant,cancelAssistant,suggest} from './assistant.js?v=cloud-8';
+import {retrieveCandidates} from './candidate-search.js?v=cloud-9';
+import {excludedGroupCode,isDirectPay,resultCategory,materialGroupType,groupTypeLabels,summarizeMaterialTypes} from './master-core.js?v=cloud-9';
+import {openAssistant,cancelAssistant,suggest} from './assistant.js?v=cloud-9';
 import {classifyBudget,budgetLabels} from './classification.js';
 
 const $=id=>document.getElementById(id);
@@ -142,7 +142,7 @@ const mobileFilters=matchMedia('(max-width: 800px)');const resizeFilters=()=>$('
 async function loadMaster(){
  $('resultSummary').hidden=true;$('dataError').hidden=true;$('searchButton').disabled=true;$('resultsSection').setAttribute('aria-busy','true');$('stats').textContent='กำลังเตรียมข้อมูลสำหรับค้นหา…';$('status').textContent='กำลังโหลดข้อมูล…';$('welcome').hidden=true;$('emptyState').hidden=true;$('more').hidden=true;$('list').innerHTML='<div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div>';
  try{
-  const response=await fetch('data.json?v=cloud-8',{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error();
+  const response=await fetch('data.json?v=cloud-9',{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error();
   db=await response.json();db.groups=db.groups.filter(g=>!excludedGroupCode(g.code));db.materials=db.materials.filter(m=>!excludedGroupCode(m[2]));groups=new Map(db.groups.map(g=>[g.code,g]));
   const fallback=code=>({code,name:'ยังไม่มีข้อมูลกลุ่มสินค้า',levels:[],gl:{},assets:[],keywords:[]});
   items=db.materials.map(m=>({kind:'materials',code:m[0],name:m[1],m,g:groups.get(m[2])||fallback(m[2])}));
