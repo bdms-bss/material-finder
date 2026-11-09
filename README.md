@@ -1,6 +1,6 @@
 # BDMS Material Master
 
-เว็บอ้างอิง Material code / Material group จาก Material Master สำหรับเตรียมการจัดซื้อและวางแผนงบประมาณ พร้อม Taxonomy L0–L4, GL แยก Department type และ Asset class จาก master จริง รองรับภาษาไทยด้วยคำพ้องที่กำหนดไว้และ AI บนเครื่องผู้ใช้
+เว็บอ้างอิง Material code / Material group จาก Material Master สำหรับเตรียมการจัดซื้อและวางแผนงบประมาณ พร้อม Taxonomy L0–L4, GL แยก Department type และ Asset class จาก master จริง รองรับภาษาไทยด้วยคำพ้องที่กำหนดไว้และ Gemini Cloud ผ่าน backend
 
 ## เปิดเว็บ
 
@@ -8,15 +8,15 @@ GitHub Settings → Pages → Deploy from a branch → main → /docs. URL: http
 
 สำหรับ local: `python -m http.server 8000 --directory docs`
 
-## AI ฟรี ไม่ต้อง login
+## Gemini Cloud ผ่าน Cloudflare Worker
 
-ใช้โมเดล AI บนเครื่องผู้ใช้ผ่าน Transformers.js + ONNX Runtime Web (CPU/WASM). ไม่มี API key, backend AI, OpenRouter login, tenant registration หรือค่า inference. เลือกแนวคิดสินค้าด้วย multilingual semantic embeddings สำหรับข้อความไทย/อังกฤษ หรือ CLIP สำหรับภาพ แล้วค้น/จัดอันดับ candidate จาก master จริง. ไม่สร้างรหัสใหม่.
+เปลี่ยนเป็น Gemini API ผ่าน backend เพื่อใช้โมเดล cloud ตีความข้อความ/ภาพ และตรวจเลือกจาก Material Master จริง. ไม่ดาวน์โหลดโมเดลใน browser และไม่ใช้บัญชี Puter/OpenRouter. Gemini key เก็บใน Cloudflare Worker secret เท่านั้น.
 
-กด **ถาม AI** เพื่อเริ่มดาวน์โหลดโมเดลครั้งแรก: ภาษา ~118 MB หรือภาพ ~154 MB พร้อม runtime/tokenizer แล้ว browser cache ไว้ตามสิทธิ์ของอุปกรณ์. คำค้น ภาพ และ candidate ไม่ถูกส่งไปยัง AI cloud. คอมพิวเตอร์/มือถือที่ RAM น้อยหรือโหลด CDN ไม่ได้อาจประมวลผลไม่สำเร็จ; มีปุ่มยกเลิกและผลค้นข้อความสำรองที่ระบุว่าไม่ใช่ AI.
+**สถานะ:** พร้อม deploy และทดสอบโค้ดแล้วด้วย mocks/dry-run แต่ยังรอผู้ดูแลสร้าง Worker/ตั้ง secrets จึงยังไม่ได้เรียก Gemini จริง. ดู [ขั้นตอน Deploy และเชื่อมต่อ](backend/README.md). Frontend config เก็บเฉพาะ Worker URL และ public Turnstile Site Key ใน `docs/ai-config.json`.
 
-ผลเป็นรายการใกล้เคียง ไม่ใช่การยืนยันชนิด รุ่น ขนาด สเปกหรือยา. มีชุดแนวคิดจัดซื้อใน `docs/ai-topics.js` และแสดง L0 ชัดเจนทั้งการ์ดผลค้นหาและการ์ด AI. คลิกรายการเพื่อดู mapping จาก master.
+ผู้ใช้ยืนยันส่งคำค้น/ภาพ/รายการ candidate ไป Cloudflare และ Google ก่อนเรียก. หนึ่งคำถามใช้ได้สูงสุด 2 Gemini calls; โควตาและค่าใช้จ่ายตาม Google project ไม่ใช่ฟรีไม่จำกัด. AI เลือกได้เฉพาะ Material codes ใน candidate; เมื่อสเปกไม่ชัดสามารถถามเพิ่มแทนเดารหัส. GL/Asset/Taxonomy และการจัดประเภทใช้ข้อมูล Master เดิม.
 
-ดู [วิธีใช้และขอบเขต AI](AI_LOGIN.md). การค้นหาข้อความธรรมดาไม่ต้องดาวน์โหลดโมเดล.
+อ่าน [ภาพรวม AI](AI_LOGIN.md) และ [ข้อจำกัดการทดสอบ](TESTING.md). คำตอบจริง/ความแม่นยำต้องทดสอบอีกครั้งหลัง backend พร้อม credentials.
 
 ## ข้อมูลและหลักเกณฑ์
 
@@ -51,7 +51,7 @@ commit `docs/data.json` ใหม่แล้ว deploy Pages. ไม่ commit 
 
 ตรวจสอบโค้ดและกติกาข้อมูล: `npm run check` และ `npm test` (ไม่ต้องติดตั้ง dependency).
 
-สำหรับ browser/UI/accessibility regression: ติดตั้ง dev dependencies ด้วย `npm install`, ติดตั้ง browser ด้วย `npx playwright install chromium` แล้วรัน `npm run test:ui`. ใช้ `CHROMIUM_PATH` หากมี Chromium ในเครื่องอยู่แล้ว. ผล screenshot อยู่ใน temporary directory `material-finder-ui` หรือกำหนด `UI_ARTIFACT_DIR` เอง. AI ใน automated UI test ใช้ Worker จำลอง; ผลทดสอบโมเดลจริงดู [TESTING.md](TESTING.md).
+สำหรับ browser/UI/accessibility regression: ติดตั้ง dev dependencies ด้วย `npm install`, ติดตั้ง browser ด้วย `npx playwright install chromium` แล้วรัน `npm run test:ui`. ใช้ `CHROMIUM_PATH` หากมี Chromium ในเครื่องอยู่แล้ว. ผล screenshot อยู่ใน temporary directory `material-finder-ui` หรือกำหนด `UI_ARTIFACT_DIR` เอง. AI ใน automated UI test ใช้ backend/Turnstile จำลอง; ผลทดสอบโมเดลจริงดู [TESTING.md](TESTING.md).
 
 ## Material Master และผลค้นหาแยกหมวด
 

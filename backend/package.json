@@ -1,0 +1,16 @@
+{
+  "name":"bdms-material-gemini",
+  "version":"1.0.0",
+  "private":true,
+  "type":"module",
+  "scripts":{"deploy":"wrangler deploy","dev":"wrangler dev","check":"node --check worker.mjs"},
+  "devDependencies":{"wrangler":"^4.36.0"},
+  "cloudflare":{
+    "label":"BDMS Material Gemini backend",
+    "description":"Gemini cloud API for Material Master; secrets stay on Cloudflare",
+    "bindings":{
+      "GEMINI_API_KEY":{"description":"Gemini API key from Google AI Studio. Stored as a Worker secret."},
+      "TURNSTILE_SECRET_KEY":{"description":"Secret key of a Turnstile widget allowing bdms-bss.github.io."}
+    }
+  }
+}

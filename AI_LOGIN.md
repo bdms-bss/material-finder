@@ -1,30 +1,13 @@
-# AI ฟรีบน browser
+# Gemini Cloud ผ่าน backend
 
-AI รุ่นนี้ไม่ใช้ login, token, API key, เครดิต OpenRouter หรือ Copilot Studio. ประมวลผลด้วย Transformers.js / ONNX Runtime Web ภายใน Web Worker ของ browser ผ่าน CPU/WASM จึงไม่ต้องมี WebGPU และไม่ทำให้หน้าค้นหาค้างระหว่างคำนวณ.
+เวอร์ชันปัจจุบันเปลี่ยนจากโมเดลที่โหลดใน browser เป็น **Google Gemini API ผ่าน Cloudflare Worker** ตามที่ผู้ดูแลเลือก. ไม่ใช้ Puter/OpenRouter และไม่ให้ผู้ใช้วาง API key ในหน้าเว็บ.
 
-## วิธีใช้
+ขั้นตอนเปิดใช้: [backend/README.md](backend/README.md).
 
-1. พิมพ์สิ่งที่ต้องการ หรือแนบภาพ JPEG/PNG/WebP ไม่เกิน 5 MB.
-2. กด “ถาม AI” หรือ “AI ฟรีบนเครื่อง” → “วิเคราะห์คำค้น / รูปด้วย AI ฟรี”.
-3. ครั้งแรก browser ดาวน์โหลดโมเดลภาษา ~118 MB สำหรับข้อความ หรือโมเดลภาพ ~154 MB สำหรับภาพ พร้อม tokenizer/runtime; มีแถบข้อความความคืบหน้าและปุ่มยกเลิก. ไฟล์จะ cache ตามที่ browser อนุญาต.
-4. AI เลือกแนวคิดสินค้าใกล้เคียงจากชุดคำศัพท์จัดซื้อไทย/อังกฤษ แล้วเว็บค้น candidate ใน master ที่ผ่านกฎ exclusion. AI เทียบ candidate อีกครั้งและแสดงได้สูงสุด 6 รายการ.
-5. คลิกการ์ดเพื่อดูรหัส, L0-L4, GL, Asset class และ CAPEX/OPEX จาก master จริง.
+หน้าเว็บจะยังไม่เรียก Gemini จนกว่าจะตั้ง Worker URL และ public Turnstile Site Key ใน `docs/ai-config.json`. Secret Gemini key และ Turnstile secret อยู่ใน Cloudflare เท่านั้น. การค้นหาข้อความปกติยังใช้ได้โดยไม่เรียก AI.
 
-## ขอบเขต
+การวิเคราะห์มีสองขั้น: ทำความเข้าใจสินค้า/สเปก → ค้น candidate จริงใน Master → ให้ Gemini ตรวจเลือกหรือถามเพิ่ม. ไม่ใช้ fixed topic vocabulary หรือ local-model download อีกต่อไป. ผลลัพธ์ยังเป็น Material code เท่านั้น และต้องตรวจ Catalog ระดับ Plant ก่อนนำไปใช้.
 
-- นี่คือ semantic retrieval และ image similarity ไม่ใช่ generative chat. ข้อความตอบประกอบสร้างจากข้อมูล master และ template ที่ควบคุมได้.
-- โมเดลไม่ได้รู้รหัส SAP; รหัสและ accounting mapping มาจาก master เท่านั้น.
-- รูปสินค้าอาจบอกชนิดได้ แต่ไม่สามารถยืนยันรุ่น ขนาด สเปก หรือชนิดยา/ปริมาณยาได้. ผลอันดับแรกเป็นเพียงรายการใกล้เคียง.
-- มีชุดแนวคิดจัดซื้อที่กำหนดไว้ใน `docs/ai-topics.js`; รายการนอกขอบเขตอาจแนะนำไม่ได้. ขยายคำศัพท์ได้ตามผล UAT.
-- ไม่ส่งคำค้น รูป หรือ candidate ไป AI server. มีการเชื่อม CDN/Hugging Face เพื่อดาวน์โหลด runtime และโมเดล จึงต้องใช้อินเทอร์เน็ตครั้งแรก.
-- ไม่คิดค่า inference/API และไม่เปิดหน้าเติมเครดิต. ยังมีค่าอินเทอร์เน็ตและใช้ CPU/RAM ของอุปกรณ์ตามปกติ.
-- เครื่องช้า มือถือ RAM น้อย หรือเครือข่ายที่บล็อก CDN/Hugging Face อาจใช้ไม่ได้. กรณีโหลดโมเดลไม่สำเร็จ แสดงข้อความผิดพลาดและผลจับคู่ข้อความแยกชัดเจนว่าไม่ใช่ผล AI.
-- การค้นหาธรรมดาไม่ต้องโหลดโมเดลและยังทำงานได้ตามปกติ. ตัวกรองของหน้าค้นหาปกติไม่จำกัด candidate ของ AI.
+ผู้ใช้ต้องยืนยันการส่งคำค้น ภาพ และ candidate ไป Cloudflare/Google ก่อน. มีโควตา/ค่าใช้จ่ายตาม Google project; ไม่รับประกันใช้ฟรีไม่จำกัด. การใช้ cloud model ไม่รับประกันความแม่นยำเอง ต้องวัดกับตัวอย่างจริงหลังตั้ง secret แล้ว.
 
-## Models / runtime
-
-- [Transformers.js 3.0.2](https://github.com/huggingface/transformers.js/tree/3.0.2)
-- [Multilingual MiniLM](https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2): feature extraction / cosine similarity สำหรับข้อความไทยและอังกฤษ (quantized)
-- [CLIP ViT-B/32](https://huggingface.co/Xenova/clip-vit-base-patch32): zero-shot image classification และ image/text similarity (quantized)
-
-โมเดลโหลดจากเจ้าของเดิม ไม่รวม weights ใน repository นี้. ดู license/model card ที่ลิงก์ต้นทาง. อุปกรณ์ผู้ใช้จะดาวน์โหลดจากแหล่งเดิมเมื่อกดใช้ AI.
+ทดสอบโค้ดด้วย provider mocks และ Worker dry-run แล้ว แต่ยังไม่ได้ทดสอบคำตอบ Gemini จริงเพราะยังไม่มี Worker ที่ deploy พร้อม credentials. ดู [TESTING.md](TESTING.md) สำหรับขอบเขตการตรวจและประวัติเวอร์ชันก่อนหน้า.

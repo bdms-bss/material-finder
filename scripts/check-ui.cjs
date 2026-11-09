@@ -15,17 +15,18 @@ const server=http.createServer((req,res)=>{
  const page=await context.newPage(),errors=[],violations=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{
-  window.workerMode='success';window.aiCandidates=[];
-  window.Worker=class{
-   postMessage(data){setTimeout(()=>{
-    if(window.workerMode==='wait')return;
-    if(window.workerMode==='fail')return this.onmessage({data:{id:data.id,type:'error',error:'Test download error'}});
-    if(data.candidates)window.aiCandidates=data.candidates;
-    const result=data.task==='topics'?[{id:1,en:'disposable examination gloves',th:'ถุงมือตรวจโรค',terms:['glove'],score:.8}]:data.candidates.map((c,i)=>({id:c.id,score:1-i*.01}));
-    this.onmessage({data:{id:data.id,type:'result',result}});
-   },25)}
-   terminate(){}
-  };
+  window.turnstileMode='success';window.cloudMode='success';window.aiCandidates=[];window.imageWasSent=false;window.Worker=class{constructor(){throw Error('Local model workers must not run')}};
+  const widgets=new Map();let next=0;
+  window.turnstile={render:(element,options)=>{const id=next++;widgets.set(id,options);return id},execute:id=>{const options=widgets.get(id);setTimeout(()=>{if(window.turnstileMode==='wait')return;options?.callback(options.action+'-test-token')},20)},remove:id=>widgets.delete(id)};
+ });
+ await page.route('https://gemini-test.example/api/*',async route=>{
+  const body=route.request().postDataJSON(),path=new URL(route.request().url()).pathname;
+  assert.ok(!JSON.stringify(body).includes('GEMINI_API_KEY'));assert.equal(route.request().headers().authorization,undefined);
+  const mode=await page.evaluate(()=>window.cloudMode);
+  if(mode==='fail')return route.fulfill({status:429,json:{message:'โควตา Gemini เต็ม'}});
+  if(path==='/api/intent'){if(body.image){assert.match(body.image,/^data:image\/jpeg;base64,/);await page.evaluate(()=>window.imageWasSent=true)}assert.equal(body.turnstileToken,'material-intent-test-token');return route.fulfill({json:{item:'ถุงมือตรวจโรค',searchTerms:['nitrile glove','glove'],requiredFeatures:[],clarificationQuestion:''}})}
+  assert.equal(body.turnstileToken,'material-rank-test-token');await page.evaluate(c=>window.aiCandidates=c,body.candidates);
+  return route.fulfill({json:{suggestions:mode==='clarify'?[]:[{id:body.candidates[0].id,reason:'ตรงประเภทที่ต้องการ'},{id:'materials:invented',reason:'must be filtered'}],clarificationQuestion:mode==='clarify'?'ต้องการขนาดใด และปลอดเชื้อหรือไม่?':''}});
  });
  const base=`http://127.0.0.1:${server.address().port}/`;
  async function axe(name){
@@ -39,7 +40,7 @@ const server=http.createServer((req,res)=>{
  }
  await page.goto(base);await page.waitForSelector('#welcome:not([hidden])');
  assert.equal(await page.locator('.brand-logo').evaluate(el=>el.complete&&el.naturalWidth>0),true);
- assert.equal(await page.locator('#kind').count(),0);
+ assert.equal(await page.locator('#kind').count(),0);await page.locator('#settings').click();await page.locator('#assistantQuery').fill('ถุงมือ');await page.locator('#sendContext').click();assert.equal(await page.locator('#backendSetup').isVisible(),true);assert.match(await page.locator('#assistantStatus').innerText(),/ยังเรียก Gemini ไม่ได้/);await page.keyboard.press('Escape');await page.route('**/ai-config.json*',route=>route.fulfill({json:{backendUrl:'https://gemini-test.example',turnstileSiteKey:'public-site-key-example'}}));await page.reload();await page.waitForSelector('#welcome:not([hidden])');
  assert.equal(await page.locator('#resultSummary').isHidden(),true);assert.equal(await page.locator('.card').count(),0);
  await page.selectOption('#budget','direct-pay');assert.equal(await page.locator('#resultSummary').isHidden(),true);assert.equal(await page.locator('.card').count(),0);
  await page.locator('#resetFilters').click();await axe('home');
@@ -70,11 +71,11 @@ const server=http.createServer((req,res)=>{
  await query('glove');await page.locator('#more').click();assert.equal(await page.locator('.card').count(),40);await page.selectOption('#sort','code');
  const codes=await page.locator('.card .code').allTextContents();assert.deepEqual(codes,[...codes].sort((a,b)=>a.localeCompare(b)));
  await query('nonexistent999999');assert.equal(await page.locator('#emptyState').isVisible(),true);await page.locator('#aiButton').click();
- await page.locator('#assistantQuery').fill('ถุงมือ');await page.locator('#sendContext').click();await page.waitForSelector('.aiRecommendation');
+ await page.locator('#assistantQuery').fill('ถุงมือ');await page.locator('#sendContext').click();assert.match(await page.locator('#assistantStatus').innerText(),/กรุณายืนยัน/);await page.locator('#cloudConsent').check();await page.locator('#sendContext').click();await page.waitForSelector('.aiRecommendation');assert.equal(await page.locator('.aiRecommendation').count(),1);
  assert.ok(await page.evaluate(()=>window.aiCandidates.every(c=>c.materialCode&&c.id.startsWith('materials:'))),'AI must only recommend material-code candidates');
  await axe('AI');await page.locator('.aiRecommendation button').first().click();assert.equal(await page.locator('#detail').isVisible(),true);await page.keyboard.press('Escape');
- await page.evaluate(()=>window.workerMode='wait');await page.locator('#sendContext').click();await page.locator('#cancelAI').click();await page.waitForFunction(()=>!document.getElementById('sendContext').disabled);assert.match(await page.locator('#assistantStatus').innerText(),/ยกเลิก/);
- await page.evaluate(()=>window.workerMode='fail');await page.locator('#sendContext').click();await page.waitForFunction(()=>!document.getElementById('sendContext').disabled);assert.match(await page.locator('#assistantOutput').innerText(),/ไม่ใช่ผล AI/);await page.keyboard.press('Escape');
+ await page.evaluate(()=>window.turnstileMode='wait');await page.locator('#sendContext').click();await page.locator('#cancelAI').click();await page.waitForFunction(()=>!document.getElementById('sendContext').disabled);assert.match(await page.locator('#assistantStatus').innerText(),/ยกเลิก/);
+ await page.evaluate(()=>{window.turnstileMode='success';window.cloudMode='fail'});await page.locator('#sendContext').click();await page.waitForFunction(()=>!document.getElementById('sendContext').disabled);assert.match(await page.locator('#assistantStatus').innerText(),/โควตา Gemini เต็ม/);assert.equal(await page.locator('.aiRecommendation').count(),0);await page.evaluate(()=>window.cloudMode='clarify');await page.locator('#sendContext').click();await page.waitForSelector('.ai-question');assert.equal(await page.locator('.aiRecommendation').count(),0);await page.evaluate(()=>window.cloudMode='success');await page.keyboard.press('Escape');
  await page.locator('#clearQuery').click();assert.equal(await page.locator('#resultSummary').isHidden(),true);assert.equal(await page.locator('.card').count(),0);
  await page.locator('#imageTab').focus();await page.keyboard.press('ArrowLeft');assert.equal(await page.locator('#textTab').getAttribute('aria-selected'),'true');
  await page.locator('#helpButton').click();assert.equal(await page.locator('#helpDialog').isVisible(),true);await page.keyboard.press('Escape');
@@ -84,9 +85,9 @@ const server=http.createServer((req,res)=>{
  await page.locator('#resultsSection').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(artifacts,'mobile-materials.png')});
  await page.locator('#settings').click();assert.equal(await page.locator('.aiRecommendation').count(),0);await page.keyboard.press('Escape');
  await page.locator('#imageTab').click();await page.locator('#photo').setInputFiles({name:'wrong.txt',mimeType:'text/plain',buffer:Buffer.from('bad image')});assert.equal(await page.locator('#imageError').isVisible(),true);
- await page.setViewportSize({width:320,height:800});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ await page.locator('#photo').setInputFiles({name:'sample.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64')});await page.waitForSelector('#imageSelected:not([hidden])');await page.locator('#searchButton').click();await page.waitForSelector('.aiRecommendation');assert.equal(await page.evaluate(()=>window.imageWasSent),true);await page.keyboard.press('Escape');await page.setViewportSize({width:320,height:800});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  const retryPage=await context.newPage();let requests=0;await retryPage.route('**/data.json*',r=>++requests===1?r.fulfill({status:503,body:'Unavailable'}):r.continue());await retryPage.goto(base);await retryPage.waitForSelector('#dataError:not([hidden])');await retryPage.locator('#retryData').click();await retryPage.waitForSelector('#welcome:not([hidden])');
  assert.deepEqual(errors,[]);assert.deepEqual(violations.map(v=>v.id),[]);
- console.log('PASS: material-code-only results/AI, group code/name search, unlinked group notice, Direct Pay, search-only compact row, counts, copy, keyboard, cancellation, mobile and accessibility');
+ console.log('PASS: Gemini cloud (mocked) config/consent/Turnstile/clarification/quota/cancel and material-code-only results/AI, group code/name search, unlinked group notice, Direct Pay, search-only compact row, counts, copy, keyboard, cancellation, mobile and accessibility');
  await browser.close();server.close();
 })().catch(error=>{console.error(error);server.close();process.exit(1)});

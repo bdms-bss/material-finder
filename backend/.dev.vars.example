@@ -1,0 +1,3 @@
+# Enter these only in Cloudflare secret settings or an untracked .dev.vars file.
+GEMINI_API_KEY=
+TURNSTILE_SECRET_KEY=

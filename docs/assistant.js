@@ -1,43 +1,68 @@
-import {verifiedRanks} from './ai-core.js?v=local-ai-1';
-// Remove credentials from the retired cloud integration without requiring storage access.
-try{for(const key of ['materialFinder.openrouter.key','materialFinder.openrouter.pkce','materialFinder.query'])sessionStorage.removeItem(key)}catch{}
-let worker,busy=false,sequence=0,pending,lastQuery='',lastImage=null;
+import {validateCloudConfig,cloudSearch,prepareCloudImage} from './cloud-ai.js?v=gemini-5';
+let busy=false,controller,lastQuery='',lastImage=null,config,configPromise,scriptPromise;
 const $=id=>document.getElementById(id);
-const status=text=>{$('assistantStatus').textContent=text;const progress=$('aiProgress');const percent=text.match(/(\d+)%/);if(percent)progress.value=Number(percent[1]);else progress.removeAttribute('value')};
-export const authReady=Promise.resolve();
+function status(value){$('assistantStatus').textContent=value;$('aiProgress').removeAttribute('value')}
+function paragraph(value){const p=document.createElement('p');p.textContent=value;return p}
 export function openAssistant(){
  const panel=$('assistantPanel');if(panel.open)return;
- const activeImage=document.getElementById('imageTab')?.getAttribute('aria-selected')==='true';
- const query=document.getElementById(activeImage?'imageQuery':'query')?.value||'';
- const image=activeImage?document.getElementById('preview')?.getAttribute('src')||null:null;
- if(!busy&&(query!==lastQuery||image!==lastImage)){$('assistantOutput').replaceChildren();status('พร้อมช่วยค้นหา กดวิเคราะห์เพื่อหารายการที่ใกล้เคียง')}
- $('assistantQuery').value=busy?lastQuery:query;
- $('assistantImageNote').hidden=busy?!lastImage:!image;
- panel.hidden=false;panel.showModal();$('assistantQuery').focus();
+ const activeImage=$('imageTab')?.getAttribute('aria-selected')==='true';const query=$(activeImage?'imageQuery':'query')?.value||'';
+ const image=activeImage?$('preview')?.getAttribute('src')||null:null;
+ if(!busy&&(query!==lastQuery||image!==lastImage)){$('assistantOutput').replaceChildren();status('ตรวจคำอธิบาย แล้วกดวิเคราะห์ผ่าน Gemini Cloud')}
+ $('assistantQuery').value=busy?lastQuery:query;$('assistantImageNote').hidden=busy?!lastImage:!image;
+ panel.hidden=false;panel.showModal();$('assistantQuery').focus();loadConfig();
 }
-function resetWorker(reason){worker?.terminate();worker=null;if(pending){clearTimeout(pending.timer);const e=reason||Object.assign(Error('ยกเลิกการประมวลผลแล้ว'),{name:'AbortError'});pending.reject(e);pending=null}}
-export function cancelAssistant(){resetWorker();status('ยกเลิกแล้ว กดส่งเพื่อลองใหม่ได้')}
-function runAI(payload){if(!worker){worker=new Worker(new URL('./local-ai-worker.js?v=local-ai-1',import.meta.url),{type:'module'});worker.onmessage=({data})=>{if(data.type==='progress'){status(data.text);return}if(pending?.id!==data.id)return;const p=pending;pending=null;clearTimeout(p.timer);data.type==='error'?p.reject(Error(data.error)):p.resolve(data.result)};worker.onerror=()=>{if(pending){const p=pending;pending=null;clearTimeout(p.timer);p.reject(Error('โหลดระบบ AI ไม่สำเร็จ'))}worker?.terminate();worker=null}}
- return new Promise((resolve,reject)=>{const id=++sequence;const timer=setTimeout(()=>{resetWorker(Error('ดาวน์โหลดหรือประมวลผลนานเกินไป'))},300000);pending={id,resolve,reject,timer};worker.postMessage({id,...payload})})}
-function paragraph(text){const p=document.createElement('p');p.textContent=text;return p}
-function showCards(records,openRecord,label){for(const {record,score}of records){const card=document.createElement('div');card.className='aiRecommendation';const b=document.createElement('button');b.textContent=(record.materialCode||'Group '+record.materialGroup)+' · '+record.description;b.onclick=()=>openRecord(record.id);const l0=record.taxonomy[0];card.append(b,paragraph(`L0: ${l0?.some(Boolean)?l0.filter(Boolean).join(' · '):'ยังไม่มีข้อมูล L0'}`),paragraph(`Group: ${record.materialGroup}${record.directPay?' · Direct Pay':''} · ${record.budgetLabel}`),paragraph(label));$('assistantOutput').append(card)}}
-export async function suggest(query,image,retrieve,openRecord){openAssistant();if(busy)return;if(!query.trim()&&!image){status('กรุณาพิมพ์สิ่งที่ต้องการ หรือเพิ่มรูปภาพ');return}
- busy=true;lastQuery=query;lastImage=image;$('assistantQuery').disabled=true;$('aiProgress').hidden=false;$('assistantOutput').setAttribute('aria-busy','true');$('sendContext').disabled=true;$('cancelAI').hidden=false;$('assistantOutput').replaceChildren();
+async function loadConfig(){
+ configPromise??=fetch('ai-config.json?v=gemini-5',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}).catch(()=>{configPromise=null;return null});
+ config=await configPromise;
+ $('backendSetup').hidden=validateCloudConfig(config);
+ $('cloudConnection').textContent=validateCloudConfig(config)?'Gemini Cloud · ผ่าน Cloudflare backend':'Gemini Cloud · รอตั้งค่า backend';
+ return config;
+}
+function loadTurnstile(){
+ if(window.turnstile)return Promise.resolve();
+ if(!scriptPromise)scriptPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;script.onload=()=>window.turnstile?resolve():reject(Error('โหลดระบบยืนยันไม่สำเร็จ'));script.onerror=()=>{script.remove();scriptPromise=null;reject(Error('เชื่อมระบบยืนยัน Cloudflare ไม่ได้'))};document.head.append(script)});
+ return scriptPromise;
+}
+async function getToken(action,signal){
+ await loadTurnstile();signal.throwIfAborted();status('กำลังยืนยันการใช้งานก่อนเรียก Gemini…');
+ return new Promise((resolve,reject)=>{
+  let widget;let complete=false;
+  const finish=(error,token)=>{if(complete)return;complete=true;clearTimeout(timer);signal.removeEventListener('abort',abort);if(widget!==undefined)window.turnstile.remove(widget);error?reject(error):resolve(token)};
+  const abort=()=>finish(Object.assign(Error('ยกเลิกแล้ว'),{name:'AbortError'}));
+  const timer=setTimeout(()=>finish(Error('ยืนยันการใช้งานหมดเวลา ลองใหม่อีกครั้ง')),75000);
+  signal.addEventListener('abort',abort,{once:true});
+  try{widget=window.turnstile.render($('turnstileWidget'),{sitekey:config.turnstileSiteKey,action,theme:'light',execution:'execute',appearance:'interaction-only',callback:token=>finish(null,token),'error-callback':()=>finish(Error('การยืนยันไม่สำเร็จ กรุณาลองอีกครั้ง')),'expired-callback':()=>finish(Error('การยืนยันหมดอายุ กรุณาลองอีกครั้ง'))});window.turnstile.execute(widget)}catch{finish(Error('เริ่มระบบยืนยันไม่สำเร็จ'))}
+ });
+}
+export function cancelAssistant(){controller?.abort();status('ยกเลิกแล้ว คำขอที่ส่งถึง Gemini ไปแล้วอาจยังถูกนับโควตา')}
+function showCards(records,openRecord){
+ for(const {record,reason}of records){const card=document.createElement('div');card.className='aiRecommendation';
+  const button=document.createElement('button');button.textContent=record.materialCode+' · '+record.description;button.onclick=()=>openRecord(record.id);
+  const l0=record.taxonomy[0];card.append(button,paragraph(reason),paragraph('L0: '+(l0?.some(Boolean)?l0.filter(Boolean).join(' · '):'ยังไม่มีข้อมูล L0')),paragraph(`Group: ${record.materialGroup}${record.directPay?' · Direct Pay':''} · ${record.budgetLabel}`),paragraph('ข้อมูลจาก Material Master · ตรวจ Catalog ของ Plant และรายละเอียดสินค้าก่อนใช้'));
+  $('assistantOutput').append(card);
+ }
+}
+export async function suggest(query,image,retrieve,openRecord){
+ openAssistant();if(busy)return;
+ if(!query.trim()&&!image){status('กรุณาพิมพ์สิ่งที่ต้องการหรือแนบภาพ');return}
+ const activeConfig=await loadConfig();if(busy)return;if(!validateCloudConfig(activeConfig)){status('ยังเรียก Gemini ไม่ได้: ผู้ดูแลต้อง deploy backend และตั้งค่า public URL / Turnstile site key ก่อน');return}
+ if(!$('cloudConsent').checked){status('กรุณายืนยันการส่งคำค้น ภาพ และ candidate ไปยัง Cloudflare และ Google Gemini ก่อน');$('cloudConsent').focus();return}
+ busy=true;lastQuery=query;lastImage=image;controller=new AbortController();const signal=controller.signal;
+ const timeout=setTimeout(()=>controller?.abort(),180000);
+ $('assistantQuery').disabled=true;$('sendContext').disabled=true;$('cancelAI').hidden=false;$('aiProgress').hidden=false;$('assistantOutput').setAttribute('aria-busy','true');$('assistantOutput').replaceChildren();
  try{
-  const topics=await runAI({task:'topics',query,image});
-  const best=topics[0];
-  if(!best||(!image&&best.score<0.18)){status('AI ยังตีความรายการไม่ชัดเจน');$('assistantOutput').append(paragraph('ลองระบุชื่อสินค้า ประเภท หรือวัตถุประสงค์การใช้งานเพิ่มเติม'));return}
-  const terms=[query,...best.terms];
-  let candidates=retrieve(terms,best.terms);
-  if(!candidates.length)candidates=retrieve([query,...topics.slice(0,3).flatMap(t=>t.terms)],topics.slice(0,3).flatMap(t=>t.terms));
-  $('assistantOutput').append(paragraph('AI เข้าใจว่าใกล้เคียง: '+best.th),paragraph('คำค้นเพิ่มเติม: '+best.terms.join(' / ')));
-  if(!candidates.length){status('ไม่พบรหัสใน master ที่ตรงกับสิ่งที่ AI เข้าใจ');return}
-  const ranked=await runAI({task:'rank',query:query+' '+best.th+' '+best.en,image,candidates});
-  const generic=image?candidates.find(c=>c.materialCode&&best.terms.some(t=>c.groupName.toLowerCase()===t.toLowerCase())):null;
-  const ordered=generic?[{id:generic.id,score:1},...ranked]:ranked;
-  const records=verifiedRanks(candidates,ordered);
-  showCards(records,openRecord,'ใกล้เคียงจาก AI บนเครื่อง · ข้อมูล Master อ้างอิง · ตรวจ Catalog ของ Plant ก่อนใช้');
-  status(`AI แนะนำ ${records.length} รายการ · ฟรี · ประมวลผลบนเครื่อง`);
- }catch(e){if(e.name==='AbortError'){status('ยกเลิกแล้ว กดส่งเพื่อลองใหม่ได้');return}status('ยังเปิด AI ไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองวิเคราะห์อีกครั้ง');const diagnostic=document.createElement('details');const title=document.createElement('summary');title.textContent='รายละเอียดปัญหาสำหรับแจ้งผู้ดูแล';diagnostic.append(title,paragraph(e.message));$('assistantOutput').append(diagnostic);const candidates=retrieve([query]).slice(0,6);if(candidates.length){$('assistantOutput').append(paragraph('ผลต่อไปนี้เป็นการจับคู่ข้อความจาก master ไม่ใช่ผล AI'));showCards(candidates.map(record=>({record})),openRecord,'ผลค้นหาข้อความ')}else $('assistantOutput').append(paragraph('ตรวจอินเทอร์เน็ตสำหรับดาวน์โหลดโมเดล แล้วกดส่งอีกครั้ง หรือค้นด้วยชื่อทั่วไปภาษาไทย/อังกฤษ'));
- }finally{busy=false;$('assistantQuery').disabled=false;$('aiProgress').hidden=true;$('assistantOutput').setAttribute('aria-busy','false');$('sendContext').disabled=false;$('cancelAI').hidden=true}
+  status('กำลังเตรียมข้อมูลสำหรับ Gemini Cloud…');
+  const prepared=await prepareCloudImage(image);signal.throwIfAborted();
+  const result=await cloudSearch({config:activeConfig,query,image:prepared,retrieve,getToken,signal,progress:status});
+  signal.throwIfAborted();
+  $('assistantOutput').append(paragraph('สิ่งที่ Gemini เข้าใจ: '+String(result.intent.item||query).slice(0,600)));
+  if(result.intent.requiredFeatures?.length)$('assistantOutput').append(paragraph('รายละเอียดที่ระบุ: '+result.intent.requiredFeatures.join(' · ')));
+  if(result.question){const question=document.createElement('div');question.className='ai-question';question.append(paragraph(result.question));const edit=document.createElement('button');edit.textContent='เพิ่มรายละเอียดในคำอธิบาย';edit.onclick=()=>$('assistantQuery').focus();question.append(edit);$('assistantOutput').append(question)}
+  showCards(result.records,openRecord);
+  if(!result.records.length&&!result.question)$('assistantOutput').append(paragraph('ยังไม่พบรหัสที่เหมาะสมจาก Master ลองระบุประเภท ขนาด หรือการใช้งานเพิ่มเติม'));
+  status(result.records.length?`Gemini แนะนำ ${result.records.length} Material codes ที่ตรวจรหัสกับ Master แล้ว`:'Gemini ยังไม่เลือกรหัสสินค้า กรุณาเพิ่มรายละเอียดตามคำถาม');
+ }catch(error){
+  if(error.name==='AbortError')status('ยกเลิกหรือหมดเวลาแล้ว คำขอที่ส่งถึง Gemini อาจยังถูกนับโควตา');
+  else{status(error.message||'เชื่อม Gemini ไม่สำเร็จ กรุณาลองใหม่');$('assistantOutput').append(paragraph('ไม่มีการสลับไปใช้โมเดลในเครื่องหรือสรุปผล AI ปลอม คุณยังค้นหาจากข้อความในหน้าหลักได้'))}
+ }finally{clearTimeout(timeout);controller=null;busy=false;$('assistantQuery').disabled=false;$('sendContext').disabled=false;$('cancelAI').hidden=true;$('aiProgress').hidden=true;$('assistantOutput').setAttribute('aria-busy','false')}
 }

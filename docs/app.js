@@ -1,5 +1,5 @@
-import {excludedGroupCode,isDirectPay,resultCategory,materialGroupType,groupTypeLabels,summarizeMaterialTypes} from './master-core.js?v=material-4';
-import {openAssistant,cancelAssistant,suggest} from './assistant.js?v=material-4';
+import {excludedGroupCode,isDirectPay,resultCategory,materialGroupType,groupTypeLabels,summarizeMaterialTypes} from './master-core.js?v=gemini-5';
+import {openAssistant,cancelAssistant,suggest} from './assistant.js?v=gemini-5';
 import {classifyBudget,budgetLabels} from './classification.js';
 
 const $=id=>document.getElementById(id);
@@ -105,10 +105,18 @@ function setMode(isImage){
  $('searchHint').textContent=isImage?'AI ช่วยหาประเภทสินค้าใกล้เคียงจากภาพ · ฟรีบนเครื่อง':'ค้นหาได้ทั้งภาษาไทย อังกฤษ และรหัสสินค้า';
 }
 function removeImage(){image=null;$('imageError').hidden=true;$('photo').value='';$('imageSelected').hidden=true;$('preview').removeAttribute('src');$('assistantImageNote').hidden=true}
-function retrieveCandidates(terms,anchors=[]){
- const tokens=[...new Set(terms.flatMap(t=>{const n=normalize(t).trim();return [n,...n.split(/\s+/).filter(w=>w.length>2)]}).filter(Boolean))];
- return items.filter(i=>i.m&&!i.m[5]&&(!anchors.length||anchors.some(t=>normalize(i.name+' '+i.g.name).includes(normalize(t))))).map(i=>({i,score:tokens.reduce((n,t)=>n+(i.text.includes(t)?(normalize(i.name).includes(t)?10:2):0),0)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i.code.localeCompare(b.i.code)).slice(0,35).map(({i})=>({id:recordId(i),materialCode:i.m?.[0]||null,description:i.name,materialGroup:i.g.code,groupName:i.g.name,taxonomy:i.g.levels,gl:i.g.gl,assetClasses:i.g.assets,budget:classifyBudget(i.g),budgetLabel:budget(i),directPay:isDirectPay(i.g.code)}));
+function retrieveCandidates(terms){
+ const phrases=[...new Set(terms.map(t=>normalize(t).trim()).filter(Boolean))];
+ const stop=new Set(['the','for','and','with','from','used','use','เครื่อง','อุปกรณ์','ต้องการ']);
+ const words=[...new Set(phrases.flatMap(t=>t.split(/[\s/(),._-]+/)).filter(t=>t.length>2&&!stop.has(t)))];
+ return items.map(i=>{
+  const name=normalize(i.name),group=normalize(i.g.name);let score=0;
+  for(const phrase of phrases){if(normalize(i.code)===phrase)score+=1000;if(normalize(i.g.code)===phrase)score+=500;if(name.includes(phrase))score+=25;if(group.includes(phrase))score+=30;}
+  for(const word of words){if(name.includes(word))score+=8;if(group.includes(word))score+=7;else if(i.text.includes(word))score+=2;}
+  return {i,score};
+ }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.i.code.localeCompare(b.i.code)).slice(0,60).map(({i})=>({id:recordId(i),materialCode:i.m[0],description:i.name,materialGroup:i.g.code,groupName:i.g.name,taxonomy:i.g.levels,gl:i.g.gl,assetClasses:i.g.assets,budget:classifyBudget(i.g),budgetLabel:budget(i),directPay:isDirectPay(i.g.code)}));
 }
+
 async function askAI({fromDrawer=false}={}){
  if(fromDrawer){if(imageMode)$('imageQuery').value=$('assistantQuery').value;else $('query').value=$('assistantQuery').value}
  const query=imageMode?$('imageQuery').value:$('query').value;
@@ -144,7 +152,7 @@ const mobileFilters=matchMedia('(max-width: 800px)');const resizeFilters=()=>$('
 async function loadMaster(){
  $('resultSummary').hidden=true;$('dataError').hidden=true;$('searchButton').disabled=true;$('resultsSection').setAttribute('aria-busy','true');$('stats').textContent='กำลังเตรียมข้อมูลสำหรับค้นหา…';$('status').textContent='กำลังโหลดข้อมูล…';$('welcome').hidden=true;$('emptyState').hidden=true;$('more').hidden=true;$('list').innerHTML='<div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div>';
  try{
-  const response=await fetch('data.json?v=material-4',{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error();
+  const response=await fetch('data.json?v=gemini-5',{signal:AbortSignal.timeout(90000)});if(!response.ok)throw Error();
   db=await response.json();db.groups=db.groups.filter(g=>!excludedGroupCode(g.code));db.materials=db.materials.filter(m=>!excludedGroupCode(m[2]));groups=new Map(db.groups.map(g=>[g.code,g]));
   const fallback=code=>({code,name:'ยังไม่มีข้อมูลกลุ่มสินค้า',levels:[],gl:{},assets:[],keywords:[]});
   items=db.materials.map(m=>({kind:'materials',code:m[0],name:m[1],m,g:groups.get(m[2])||fallback(m[2])}));

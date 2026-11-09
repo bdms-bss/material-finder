@@ -1,3 +1,7 @@
+# Current: Gemini Cloud integration
+
+ปัจจุบันใช้ Gemini backend. Tests ด้านล่างที่กล่าวถึง local inference เป็นประวัติเวอร์ชันเก่า ไม่ใช่ผลทดสอบโมเดล cloud. **ยังไม่ได้เรียก Gemini จริง เนื่องจากไม่มี Worker ที่ deploy พร้อม API key ใน session นี้.**
+
 # Verification of free local AI
 
 ทดสอบใน Chromium บน Linux ก่อนเผยแพร่ โดยใช้โมเดลจริงจาก Hugging Face ผ่าน CPU/WASM (ไม่มี token, API key หรือ mocked AI response):
@@ -57,3 +61,11 @@
 - Direct Pay อยู่ในตัวกรองประเภท, summary, badge และเก็บ GL/Asset accounting เดิมใน detail
 - ยอด summary ไม่ซ้ำระหว่าง OPEX กับ Direct Pay และผลรวมเท่ากับ Material codes ที่พบ
 - ตรวจ Desktop และ mobile 390/320 px: strip อยู่แถวเดียว มือถือเลื่อนภายในแถว ไม่มี page overflow; axe ไม่พบ violations ในสถานะที่ตรวจ
+
+## Gemini / Cloudflare backend integration
+
+- Node tests ตรวจ intent/rank schemas, server-only x-goog-api-key, Turnstile action/hostname, CORS, rate limit, excluded/group-only candidates และไม่ echo secret/provider error
+- Cloud orchestration tests ตรวจสองขั้นพร้อม tokens แยก, skip rank เมื่อไม่มี candidate, ไม่ retry เมื่อ quota เต็ม, และ reject IDs ที่ AI แต่งขึ้น
+- Browser tests ใช้ backend/Turnstile mocks: setup pending, consent, material-only recommendations, clarification, quota/cancel, ไม่มี local model fallback พร้อม regression UI/filters/copy/mobile/accessibility
+- Wrangler deploy --dry-run ผ่าน; bundle gzip ประมาณ 5 KB, ไม่มี Master dataset หรือ key รวมใน bundle
+- ไม่ได้ deploy Cloudflare จริง และไม่ได้ทดสอบ model quality/Google quota/real Turnstile challenge; ต้องทำหลังผู้ดูแลตั้ง backend แล้ว

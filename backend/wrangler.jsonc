@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bdms-material-gemini",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-09",
+  "workers_dev": true,
+  "vars": {
+    "ALLOWED_ORIGIN": "https://bdms-bss.github.io",
+    "TURNSTILE_HOSTNAME": "bdms-bss.github.io",
+    "GEMINI_MODEL": "gemini-2.5-flash"
+  },
+  "ratelimits": [
+    {
+      "name": "AI_RATE_LIMITER",
+      "namespace_id": "730119",
+      "simple": {"limit": 20, "period": 60}
+    }
+  ],
+  "observability": {"enabled": false}
+}
